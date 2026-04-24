@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Newtonsoft.Json;
+using NLog;
 
 namespace AI_AOI.Config
 {
@@ -20,6 +21,7 @@ namespace AI_AOI.Config
 
     public static class SoftwareSettingsManager
     {
+        private static readonly Logger Logger = LogManager.GetLogger("debug");
         private static readonly object Sync = new object();
         private static SoftwareSettingsData _current;
 
@@ -77,9 +79,9 @@ namespace AI_AOI.Config
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // fall through to defaults
+                Logger.Warn(ex, "Failed to load software settings from {0}. Falling back to defaults.", ConfigPath);
             }
 
             var defaults = CreateDefaultSettings();

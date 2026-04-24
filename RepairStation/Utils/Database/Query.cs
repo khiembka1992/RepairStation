@@ -182,9 +182,12 @@ SELECT
     c.ImageWidth,
     c.ImageHeight,
     b.Number AS BlockNumber,
+    c.TopImage,
     c.SideImage,
+    c.TopReferenceImage,
     c.SideReferenceImage,
     a.AlarmType,
+    a.TopImage AS AlarmTopImage,
     a.SideImage AS AlarmSideImage
 FROM dbo.Component c
 INNER JOIN dbo.Block b ON b.ID = c.BlockID
@@ -211,7 +214,9 @@ ORDER BY b.Number, c.Name, c.ID;";
                                 Width = ReadDouble(reader, "ImageWidth"),
                                 Height = ReadDouble(reader, "ImageHeight"),
                                 Block = ReadInt(reader, "BlockNumber"),
+                                TopImageBytes = ReadBytes(reader, "TopImage"),
                                 SideImageBytes = ReadBytes(reader, "SideImage"),
+                                TopReferenceImageBytes = ReadBytes(reader, "TopReferenceImage"),
                                 SideReferenceImageBytes = ReadBytes(reader, "SideReferenceImage"),
                                 AlarmTypes = new List<string>()
                             };
@@ -233,6 +238,10 @@ ORDER BY b.Number, c.Name, c.ID;";
                         if (defect.AlarmSideImageBytes == null)
                         {
                             defect.AlarmSideImageBytes = ReadBytes(reader, "AlarmSideImage");
+                        }
+                        if (defect.AlarmTopImageBytes == null)
+                        {
+                            defect.AlarmTopImageBytes = ReadBytes(reader, "AlarmTopImage");
                         }
                     }
                 }
@@ -390,8 +399,11 @@ ORDER BY i.InspectionDateTime DESC;";
         public double Angle { get; set; }
         public double Width { get; set; }
         public double Height { get; set; }
+        public byte[] TopImageBytes { get; set; }
         public byte[] SideImageBytes { get; set; }
+        public byte[] TopReferenceImageBytes { get; set; }
         public byte[] SideReferenceImageBytes { get; set; }
+        public byte[] AlarmTopImageBytes { get; set; }
         public byte[] AlarmSideImageBytes { get; set; }
         public List<string> AlarmTypes { get; set; } = new List<string>();
     }

@@ -1,53 +1,42 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Drawing;
 using System.IO;
-using System.IO.Ports;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
-using System.Xml.Linq;
+using System.Windows.Media.Imaging;
 using AI_AOI.Config;
 using AI_AOI.Database;
 using AI_AOI.Utils;
-using AI_AOI.Views;
 using AIOT.Utils;
 using Andrew.Controls;
 using Emgu.CV;
+using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using Newtonsoft.Json.Linq;
 using NLog;
-using System.Runtime.InteropServices;
-using System.Reflection;
-using System.Windows.Media.Imaging;
 using Application = System.Windows.Application;
 using Brushes = System.Windows.Media.Brushes;
 using MessageBox = System.Windows.MessageBox;
 using Path = System.IO.Path;
-using Point = System.Drawing.Point;
-using Rectangle = System.Drawing.Rectangle;
 
-namespace AI_AOI.Views
-{
+namespace AI_AOI.Views {
     public partial class MainWindow : Window
     {
         readonly NLog.Logger Logger = NLog.LogManager.GetLogger("debug");
 
-        private Timer DisplayTimer;
         private Timer StatisticsPollTimer;
-
 
         int CurrentComponentLocation = 0;
 
         Image<Bgr, byte> PanelImage;
 
-        ConcurrentQueue<DisplayInfor> DisplayInfors = new ConcurrentQueue<DisplayInfor>();
         DisplayInfor CurrentDisplayInfor = null;
         List<bool?> CurrentConfirmResults = new List<bool?>();
         List<string> CurrentConfirmDefectTypes = new List<string>();
@@ -59,6 +48,7 @@ namespace AI_AOI.Views
         int AlarmTypePageIndex = 0;
         const int AlarmTypeButtonsPerPage = 9;
         static readonly string[] NumpadShortcutOrder = { "7", "8", "9", "4", "5", "6", "1", "2", "3" };
+        bool IsTopComponentImageMode = false;
         bool IsConfirmingIssue = false;
         bool IsStatisticsSelectionHandlingEnabled = true;
         bool WasStatisticsEmpty = true;
@@ -68,9 +58,6 @@ namespace AI_AOI.Views
         List<InspectionStatisticRow> StatisticsRows = new List<InspectionStatisticRow>();
         readonly SessionStatistics SessionStats = new SessionStatistics();
         readonly HashSet<Guid> SessionCountedInspectionIds = new HashSet<Guid>();
-
-        List<TextBox> tbBoardNames = new List<TextBox>();
-        List<Label> statusConveryors = new List<Label>();
 
         public MainWindow()
         {
@@ -84,6 +71,9 @@ namespace AI_AOI.Views
             PanelImageView.BulkAllOkRequested += PanelImageView_BulkAllOkRequested;
             PanelImageView.BulkAllNgRequested += PanelImageView_BulkAllNgRequested;
             tbStatus.Text = "Result: WAITTING";
+            ComponentReferenceImageView.MouseLeftButtonUp += ComponentPreviewImage_MouseLeftButtonUp;
+            ComponentImageView.MouseLeftButtonUp += ComponentPreviewImage_MouseLeftButtonUp;
+            AlarmComponentImageView.MouseLeftButtonUp += ComponentPreviewImage_MouseLeftButtonUp;
 
             Task.Run(() => {
                 if (SQL.IsDatabaseConnected()) {
@@ -93,11 +83,6 @@ namespace AI_AOI.Views
                     }));
                 }
             });
-
-            DisplayTimer = new System.Timers.Timer(100);
-            DisplayTimer.Elapsed += DisplayTimer_Elapsed;
-            DisplayTimer.AutoReset = true;
-            DisplayTimer.Enabled = true;
 
             StatisticsPollTimer = new System.Timers.Timer(2000);
             StatisticsPollTimer.Elapsed += StatisticsPollTimer_Elapsed;
@@ -136,13 +121,6 @@ namespace AI_AOI.Views
         private TextBlock tbIpy => StatisticsScreen.IpyText;
         private TextBlock tbFpy => StatisticsScreen.FpyText;
 
-        private void DisplayTimer_Elapsed(object sender, ElapsedEventArgs e)
-        {
-            DisplayTimer.Enabled = false;
-            DisplayProcess();
-            DisplayTimer.Enabled = true;
-        }
-
         private void LoadComponentLocation(int ComponentLocation)
         {
             if (PanelImage is null) return;
@@ -154,55 +132,73 @@ namespace AI_AOI.Views
                 : CurrentComponentInfor.Catalog;
             tbHeaderBoardInfo.Text = $"{CurrentComponentInfor.Name} @ {CurrentComponentInfor.BlockID} {catalogText}";
 
-            var sideRefImageSource = ScaleImageSourceIfSmallerThanSize(
-                CreateImageSourceFromBytes(CurrentComponentInfor.SideReferenceImageBytes),
-                2.0,
-                256);
-            var sideImageSource = CreateImageSourceFromBytes(CurrentComponentInfor.SideImageBytes);
-            var alarmSideImageSource = CreateImageSourceFromBytes(CurrentComponentInfor.AlarmSideImageBytes);
-            ComponentReferenceImageView.Source = sideRefImageSource;
-            ComponentReferenceImageView.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
-            ComponentReferenceImageView.RenderTransform = new System.Windows.Media.RotateTransform(CurrentComponentInfor.Angle);
-            ComponentImageView.Source = sideImageSource;
-            AlarmComponentImageView.Source = alarmSideImageSource;
+            // Default on each component is Side view.
+            IsTopComponentImageMode = false;
+            RenderComponentPreviewImages(CurrentComponentInfor);
             AlarmTypePageIndex = 0;
             UpdateAlarmTypeButtons(CurrentComponentInfor, keepCurrentPage: false);
             UpdateMainStatusForCurrentComponent();
+        }
+
+        private void ComponentPreviewImage_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (CurrentDisplayInfor == null || CurrentDisplayInfor.ComponentInfors == null) return;
+            if (CurrentComponentLocation < 0 || CurrentComponentLocation >= CurrentDisplayInfor.ComponentInfors.Count) return;
+
+            IsTopComponentImageMode = !IsTopComponentImageMode;
+            RenderComponentPreviewImages(CurrentDisplayInfor.ComponentInfors[CurrentComponentLocation]);
+            e.Handled = true;
+        }
+
+        private void RenderComponentPreviewImages(ComponentInfor componentInfor)
+        {
+            if (componentInfor == null)
+            {
+                ComponentReferenceImageView.Source = null;
+                ComponentImageView.Source = null;
+                AlarmComponentImageView.Source = null;
+                return;
+            }
+
+            byte[] refBytes = IsTopComponentImageMode && componentInfor.TopReferenceImageBytes != null
+                ? componentInfor.TopReferenceImageBytes
+                : componentInfor.SideReferenceImageBytes;
+            byte[] componentBytes = IsTopComponentImageMode && componentInfor.TopImageBytes != null
+                ? componentInfor.TopImageBytes
+                : componentInfor.SideImageBytes;
+            byte[] alarmBytes = IsTopComponentImageMode && componentInfor.AlarmTopImageBytes != null
+                ? componentInfor.AlarmTopImageBytes
+                : componentInfor.AlarmSideImageBytes;
+
+            ComponentReferenceImageView.Source = ScaleImageSourceIfSmallerThanSize(
+                CreateImageSourceFromBytes(refBytes),
+                2.0,
+                256);
+            ComponentReferenceImageView.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
+            ComponentReferenceImageView.RenderTransform = new System.Windows.Media.RotateTransform(componentInfor.Angle);
+            ComponentImageView.Source = CreateImageSourceFromBytes(componentBytes);
+            AlarmComponentImageView.Source = CreateImageSourceFromBytes(alarmBytes);
         }
 
         private void DisplayProcess()
         {
             try
             {
-                if (DisplayInfors.Count <= 0) return;
-                if (!DisplayInfors.TryDequeue(out var displayInfor)) return;
-                CurrentDisplayInfor = displayInfor;
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     ResetConfirmIssueUI();
-                    UpdateDisplayHeader(displayInfor);
+                    UpdateDisplayHeader(CurrentDisplayInfor);
 
                     PanelImage?.Dispose();
                     PanelImage = null;
 
-                    GC.Collect();
-                    GC.WaitForPendingFinalizers();
-                    GC.Collect();
+                    // GC.Collect();
+                    // GC.WaitForPendingFinalizers();
+                    // GC.Collect();
 
-                    if (displayInfor.PanelImageBytes != null && displayInfor.PanelImageBytes.Length > 0)
+                    if (CurrentDisplayInfor.PanelImage != null && !CurrentDisplayInfor.PanelImage.IsEmpty)
                     {
-                        using (var mat = new Mat())
-                        {
-                            CvInvoke.Imdecode(displayInfor.PanelImageBytes, Emgu.CV.CvEnum.ImreadModes.Color, mat);
-                            if (!mat.IsEmpty)
-                            {
-                                PanelImage = mat.ToImage<Bgr, byte>();
-                            }
-                        }
-                    }
-                    else if (!string.IsNullOrEmpty(displayInfor.PanelImagePath))
-                    {
-                        PanelImage = CvInvoke.Imread(displayInfor.PanelImagePath).ToImage<Bgr, byte>();
+                        PanelImage = CurrentDisplayInfor.PanelImage.ToImage<Bgr, byte>();
                     }
 
                     if (PanelImage != null)
@@ -215,22 +211,21 @@ namespace AI_AOI.Views
                     {
                         PanelImageView.ImageSource = null;
                     }
-                    EnsureComponentOverlays(displayInfor);
-                    PanelImageView.DrawedRectangles = displayInfor.MyDrawedRectangle;
-                    PanelImageView.DrawedTexts = displayInfor.MyDrawedText;
-                    if (displayInfor.Status)
+                    EnsureComponentOverlays(CurrentDisplayInfor);
+                    PanelImageView.DrawedRectangles = CurrentDisplayInfor.MyDrawedRectangle;
+                    PanelImageView.DrawedTexts = CurrentDisplayInfor.MyDrawedText;
+                    if (CurrentDisplayInfor.Status)
                     {
                         IsConfirmingIssue = false;
                         CurrentConfirmResults = new List<bool?>();
                         CurrentConfirmDefectTypes = new List<string>();
                         CurrentConfirmDisplayTypes = new List<string>();
+                        IsTopComponentImageMode = false;
                         ComponentReferenceImageView.Source = null;
                         ComponentReferenceImageView.RenderTransform = null;
                         ComponentImageView.Source = null;
                         AlarmComponentImageView.Source = null;
                         UpdateAlarmedStatistics();
-                        // No component needs confirmation: show final OK screen immediately
-                        // so operator can press Enter/click to commit and move to next inspection.
                         ShowResult("OK");
                     }
                     else
@@ -372,9 +367,36 @@ namespace AI_AOI.Views
 
         private DisplayInfor BuildDisplayInfor(QueryResult queryResult, InspectionStatisticRow rowMeta)
         {
-            var panelPixelSize = ResolvePanelPixelSize(queryResult);
-            double imageWidthPx = panelPixelSize.width;
-            double imageHeightPx = panelPixelSize.height;
+            Mat panelImage = null;
+            double imageWidthPx = 0;
+            double imageHeightPx = 0;
+
+            if (queryResult?.BoardImageBytes != null && queryResult.BoardImageBytes.Length > 0)
+            {
+                try
+                {
+                    panelImage = new Mat();
+                    CvInvoke.Imdecode(queryResult.BoardImageBytes, Emgu.CV.CvEnum.ImreadModes.Color, panelImage);
+                    if (panelImage != null && !panelImage.IsEmpty)
+                    {
+                        CvInvoke.Rotate(panelImage, panelImage, RotateFlags.Rotate180);
+                        imageWidthPx = panelImage.Cols;
+                        imageHeightPx = panelImage.Rows;
+                    }
+                    else
+                    {
+                        panelImage?.Dispose();
+                        panelImage = null;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warn(ex, "Failed to decode BoardImage for inspection {0}. Continue without panel image.", queryResult?.ID);
+                    panelImage?.Dispose();
+                    panelImage = null;
+                }
+            }
+
             double boardWidthMm = Math.Max(queryResult.BoardWidth, 0.000001);
             double boardHeightMm = Math.Max(queryResult.BoardHeight, 0.000001);
             double scaleX = imageWidthPx / boardWidthMm;
@@ -384,8 +406,7 @@ namespace AI_AOI.Views
             {
                 InspectionID = queryResult.ID,
                 SN = queryResult.SN,
-                PanelImagePath = null, //ResolvePanelImagePath(queryResult.BoardName, queryResult.Time, queryResult.SN),
-                PanelImageBytes = queryResult.BoardImageBytes,
+                PanelImage = panelImage,
                 Model = queryResult.BoardName,
                 Status = queryResult.Status,
                 InspectTime = queryResult.Time,
@@ -402,8 +423,8 @@ namespace AI_AOI.Views
             foreach (var defect in queryResult.DefectLocations ?? Enumerable.Empty<DefectLocation>())
             {
                 // mm -> pixel
-                double x = defect.X * scaleX;
-                double y = defect.Y * scaleY;
+                double x = (boardWidthMm-defect.X) * scaleX;
+                double y = (boardHeightMm-defect.Y) * scaleY;
                 double w = Math.Abs(defect.Width * scaleX);
                 double h = Math.Abs(defect.Height * scaleY);
 
@@ -418,8 +439,11 @@ namespace AI_AOI.Views
                     Width = w,
                     Height = h,
                     Angle = defect.Angle,
+                    TopImageBytes = defect.TopImageBytes,
                     SideImageBytes = defect.SideImageBytes,
+                    TopReferenceImageBytes = defect.TopReferenceImageBytes,
                     SideReferenceImageBytes = defect.SideReferenceImageBytes,
+                    AlarmTopImageBytes = defect.AlarmTopImageBytes,
                     AlarmSideImageBytes = defect.AlarmSideImageBytes,
                     AlarmTypes = defect.AlarmTypes?.Distinct().ToList() ?? new List<string>()
                 });
@@ -428,23 +452,6 @@ namespace AI_AOI.Views
 
             EnsureComponentOverlays(displayInfor);
             return displayInfor;
-        }
-
-        private (double width, double height) ResolvePanelPixelSize(QueryResult queryResult)
-        {
-            if (queryResult?.BoardImageBytes != null && queryResult.BoardImageBytes.Length > 0)
-            {
-                using (var mat = new Mat())
-                {
-                    CvInvoke.Imdecode(queryResult.BoardImageBytes, Emgu.CV.CvEnum.ImreadModes.Color, mat);
-                    if (!mat.IsEmpty)
-                    {
-                        return (mat.Width, mat.Height);
-                    }
-                }
-            }
-
-            return (0.0, 0.0);
         }
 
         private void EnsureComponentOverlays(DisplayInfor displayInfor)
@@ -1158,33 +1165,13 @@ namespace AI_AOI.Views
             }
 
             var rowMeta = StatisticsRows.FirstOrDefault(x => x.InspectionID == inspectionId);
-            var displayInfor = BuildDisplayInfor(queryResult, rowMeta);
+            CurrentDisplayInfor = BuildDisplayInfor(queryResult, rowMeta);
             StopStatisticsPolling();
             MainScreenHost.Content = OperationScreen;
-            DisplayInfors.Enqueue(displayInfor);
             DisplayProcess();
             return true;
         }
 
-        private void OpenNextInspectionFromStatistics()
-        {
-            if (CurrentDisplayInfor == null) return;
-            if (!(dgStatistics.ItemsSource is IEnumerable<InspectionStatisticRow> rowsSource)) return;
-
-            var rows = rowsSource.ToList();
-            if (rows.Count == 0) return;
-
-            int currentIndex = rows.FindIndex(x => x.InspectionID == CurrentDisplayInfor.InspectionID);
-            if (currentIndex < 0 || currentIndex + 1 >= rows.Count)
-            {
-                UILib.ShowInformation("No next inspection in current Statistics list.");
-                return;
-            }
-
-            var nextRow = rows[currentIndex + 1];
-            dgStatistics.SelectedItem = nextRow;
-            OpenInspection(nextRow.InspectionID);
-        }
 
         private void NavigateComponent(int step)
         {
@@ -1196,20 +1183,8 @@ namespace AI_AOI.Views
             LoadComponentLocation(CurrentComponentLocation);
         }
 
-        private void CompleteConfirmByButton()
-        {
-            if (!IsConfirmingIssue) return;
-            if (CurrentConfirmResults.Any(x => !x.HasValue))
-            {
-                UILib.ShowWarning("Please confirm all issue positions before done.");
-                return;
-            }
-            FinalizeConfirmIssue();
-        }
-
         private void Window_Closed(object sender, EventArgs e) {
             StopStatisticsPolling();
-            DisplayTimer?.Stop();
             if (PanelImageView != null)
             {
                 PanelImageView.BulkAllOkRequested -= PanelImageView_BulkAllOkRequested;
@@ -1484,6 +1459,11 @@ namespace AI_AOI.Views
 
         private void StatisticsPollTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
+            if (StatisticsPollTimer != null)
+            {
+                StatisticsPollTimer.Enabled = false;
+            }
+
             if (Dispatcher == null || Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
             {
                 return;
@@ -1491,8 +1471,19 @@ namespace AI_AOI.Views
 
             Dispatcher.BeginInvoke(new Action(() =>
             {
-                if (!IsLoaded) return;
-                PollStatisticsAndAutoOpen();
+                try
+                {
+                    if (!IsLoaded) return;
+                    PollStatisticsAndAutoOpen();
+                }
+                finally
+                {
+                    // Resume polling only when staying on Statistics screen.
+                    if (StatisticsPollTimer != null && MainScreenHost.Content == StatisticsScreen)
+                    {
+                        StatisticsPollTimer.Enabled = true;
+                    }
+                }
             }));
         }
 
@@ -1663,8 +1654,11 @@ namespace AI_AOI.Views
         public double Width { get; set; }
         public double Height { get; set; }
         public double Angle { get; set; }
+        public byte[] TopImageBytes { get; set; }
         public byte[] SideImageBytes { get; set; }
+        public byte[] TopReferenceImageBytes { get; set; }
         public byte[] SideReferenceImageBytes { get; set; }
+        public byte[] AlarmTopImageBytes { get; set; }
         public byte[] AlarmSideImageBytes { get; set; }
         public List<string> AlarmTypes { get; set; } = new List<string>();
     }
@@ -1685,8 +1679,7 @@ namespace AI_AOI.Views
         public int BlockCount { get; set; }
         public int TotalComponentCount { get; set; }
         public int NgAoiComponentCount { get; set; }
-        public string PanelImagePath { get; set; }
-        public byte[] PanelImageBytes { get; set; }
+        public Mat PanelImage { get; set; }
         public List<ComponentInfor> ComponentInfors = new List<ComponentInfor>();
         public ObservableCollection<MyDrawedRectangle> MyDrawedRectangle = new ObservableCollection<MyDrawedRectangle>();
         public ObservableCollection<MyDrawedText> MyDrawedText = new ObservableCollection<MyDrawedText>();

@@ -8,7 +8,7 @@
         Closed="Window_Closed"
         WindowStartupLocation="CenterScreen"
         mc:Ignorable="d"
-        Title="Repair Station" Height="1000" Width="1920"
+        Title="Repair Station" Height="700" Width="1280"
         Background="{StaticResource AppScreenBackgroundBrush}">
     <Window.Resources>
         <Style x:Key="MainMenuStyle" TargetType="Menu">

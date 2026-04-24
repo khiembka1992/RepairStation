@@ -1,10 +1,8 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
 using AI_AOI.Config;
-using AI_AOI.Utils.Database.RepairAIDatabase;
 
 namespace AI_AOI.Database
 {
@@ -214,23 +212,60 @@ WHERE ID = @InspectionID;", inspectionId);
 
         private static void UpdateAlarmDefectTypes(Guid inspectionId, Dictionary<Guid, string> componentDefectTypes)
         {
-            using (var db = new RepairAIDataContext(SoftwareSettingsManager.Current.HOLLY_AOI_REPAIR_AIConnectionString))
+            string connStr = SoftwareSettingsManager.Current.HOLLY_AOI_REPAIR_AIConnectionString;
+            using (var conn = new SqlConnection(connStr))
             {
-                var alarms = db.Alarms.Where(a => a.Component.Block.InspectionID == inspectionId).ToList();
-                foreach (var alarm in alarms)
+                conn.Open();
+                using (var tx = conn.BeginTransaction())
                 {
-                    string value = "OK";
-                    if (componentDefectTypes != null
-                        && componentDefectTypes.TryGetValue(alarm.ComponentID, out var mapped)
-                        && !string.IsNullOrWhiteSpace(mapped))
+                    try
                     {
-                        value = mapped.Trim();
+                        // Default all alarms in this inspection to OK first.
+                        using (var resetCmd = new SqlCommand(@"
+UPDATE a
+SET a.DefectType = 'OK'
+FROM dbo.Alarm a
+INNER JOIN dbo.Component c ON c.ID = a.ComponentID
+INNER JOIN dbo.Block b ON b.ID = c.BlockID
+WHERE b.InspectionID = @InspectionID;", conn, tx))
+                        {
+                            resetCmd.Parameters.AddWithValue("@InspectionID", inspectionId);
+                            resetCmd.ExecuteNonQuery();
+                        }
+
+                        if (componentDefectTypes != null && componentDefectTypes.Count > 0)
+                        {
+                            using (var setCmd = new SqlCommand(@"
+UPDATE a
+SET a.DefectType = @DefectType
+FROM dbo.Alarm a
+INNER JOIN dbo.Component c ON c.ID = a.ComponentID
+INNER JOIN dbo.Block b ON b.ID = c.BlockID
+WHERE b.InspectionID = @InspectionID
+  AND a.ComponentID = @ComponentID;", conn, tx))
+                            {
+                                setCmd.Parameters.AddWithValue("@InspectionID", inspectionId);
+                                var defectParam = setCmd.Parameters.Add("@DefectType", System.Data.SqlDbType.NVarChar, 200);
+                                var componentParam = setCmd.Parameters.Add("@ComponentID", System.Data.SqlDbType.UniqueIdentifier);
+
+                                foreach (var kv in componentDefectTypes)
+                                {
+                                    if (kv.Key == Guid.Empty) continue;
+                                    componentParam.Value = kv.Key;
+                                    defectParam.Value = string.IsNullOrWhiteSpace(kv.Value) ? "OK" : kv.Value.Trim();
+                                    setCmd.ExecuteNonQuery();
+                                }
+                            }
+                        }
+
+                        tx.Commit();
                     }
-
-                    alarm.DefectType = value;
+                    catch
+                    {
+                        tx.Rollback();
+                        throw;
+                    }
                 }
-
-                db.SubmitChanges();
             }
         }
 
