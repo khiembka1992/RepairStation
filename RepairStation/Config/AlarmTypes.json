@@ -1,0 +1,22 @@
+{
+  "General": "Cảnh báo",
+  "Missing": "Mất liệu",
+  "Shift": "Lệch vị",
+  "Billboard": "Bia dựng",
+  "Tombstone": "Lật nghiêng",
+  "Flipover": "Lật ngửa",
+  "Wrong Part": "Nhầm liệu",
+  "Polarity": "Ngược chiều",
+  "No Solder": "Thiếu thiếc",
+  "Exes Solder": "Thừa thiếc",
+  "Dry Joint": "Không hàn",
+  "Lift Lead": "Cong chân",
+  "Bridge": "Đoản mạch",
+  "Broken": "Vỡ liệu",
+  "Scratch": "Nứt liệu",
+  "Peel Off": "Khác",
+  "Exes Comp": "Thừa kiện",
+  "Solder Ball": "Cầu thiếc",
+  "Particle": "Bản bẩn",
+  "Cropper": "Không có thiếc"
+}

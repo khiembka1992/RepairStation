@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35931.197
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RepairStation", "RepairStation\RepairStation.csproj", "{B52935CD-54A0-4E70-9048-18B5B6FA3A2D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B52935CD-54A0-4E70-9048-18B5B6FA3A2D}.Debug|x64.ActiveCfg = Debug|x64
+		{B52935CD-54A0-4E70-9048-18B5B6FA3A2D}.Debug|x64.Build.0 = Debug|x64
+		{B52935CD-54A0-4E70-9048-18B5B6FA3A2D}.Release|x64.ActiveCfg = Release|x64
+		{B52935CD-54A0-4E70-9048-18B5B6FA3A2D}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A7027F6D-00AA-4D34-9378-5702D1B95C94}
+	EndGlobalSection
+EndGlobal

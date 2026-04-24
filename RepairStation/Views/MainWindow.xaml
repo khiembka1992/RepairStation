@@ -1,0 +1,84 @@
+﻿<Window x:Class="AI_AOI.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        Loaded="Window_Loaded"
+        PreviewKeyDown="Window_PreviewKeyDown"
+        Closed="Window_Closed"
+        WindowStartupLocation="CenterScreen"
+        mc:Ignorable="d"
+        Title="Repair Station" Height="1000" Width="1920"
+        Background="{StaticResource AppScreenBackgroundBrush}">
+    <Window.Resources>
+        <Style x:Key="MainMenuStyle" TargetType="Menu">
+            <Setter Property="Background" Value="{StaticResource AppHeaderBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource AppTextPrimaryBrush}"/>
+        </Style>
+        <Style x:Key="MainMenuItemStyle" TargetType="MenuItem">
+            <Setter Property="Foreground" Value="{StaticResource AppTextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{StaticResource AppHeaderBackgroundBrush}"/>
+        </Style>
+        <Style x:Key="MenuGlyphStyle" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="Foreground" Value="{StaticResource AppTextPrimaryBrush}"/>
+        </Style>
+    </Window.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Menu Grid.Row="0" Style="{StaticResource MainMenuStyle}">
+            <MenuItem Header="View" Style="{StaticResource MainMenuItemStyle}">
+                <MenuItem x:Name="menuStatisticsView" Header="Statistics" Click="menuStatisticsView_Click" Style="{StaticResource MainMenuItemStyle}">
+                    <MenuItem.Icon>
+                        <TextBlock Style="{StaticResource MenuGlyphStyle}" Text="&#xE9D2;"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem x:Name="menuOperationView" Header="Operation" Click="menuOperationView_Click" Style="{StaticResource MainMenuItemStyle}">
+                    <MenuItem.Icon>
+                        <TextBlock Style="{StaticResource MenuGlyphStyle}" Text="&#xE7C3;"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+            <MenuItem Header="Config" Style="{StaticResource MainMenuItemStyle}">
+                <MenuItem x:Name="menuSoftware" Header="Software" Click="menuSoftware_Click" Style="{StaticResource MainMenuItemStyle}">
+                    <MenuItem.Icon>
+                        <TextBlock Style="{StaticResource MenuGlyphStyle}" Text="&#xE713;"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+            <MenuItem Header="Help" Style="{StaticResource MainMenuItemStyle}">
+                <MenuItem x:Name="menuHelp" Header="Help" Click="menuHelp_Click" Style="{StaticResource MainMenuItemStyle}">
+                    <MenuItem.Icon>
+                        <TextBlock Style="{StaticResource MenuGlyphStyle}" Text="&#xE897;"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem x:Name="menuAbout" Header="About" Click="menuAbout_Click" Style="{StaticResource MainMenuItemStyle}">
+                    <MenuItem.Icon>
+                        <TextBlock Style="{StaticResource MenuGlyphStyle}" Text="&#xE946;"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+        </Menu>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal">
+            <Button Content="Statistics"
+                    Style="{StaticResource AppToolbarButtonStyle}"
+                    Click="menuStatisticsView_Click"/>
+            <Button Content="Operation"
+                    Style="{StaticResource AppToolbarButtonStyle}"
+                    Click="menuOperationView_Click" Visibility="Collapsed"/>
+        </StackPanel>
+
+        <ContentControl x:Name="MainScreenHost" Grid.Row="2"/>
+        <StackPanel Orientation="Horizontal" Grid.Row="3">
+            <Ellipse x:Name="elDatabaseStatus" Width="15" Height="15" StrokeThickness="1"  HorizontalAlignment="Left" Stroke="Gray"/>
+            <TextBlock Text="Database | " Foreground="{StaticResource AppTextPrimaryBrush}"/>
+            <TextBlock x:Name="tbStatus" Foreground="{StaticResource AppTextPrimaryBrush}"/>
+        </StackPanel>
+    </Grid>
+</Window>

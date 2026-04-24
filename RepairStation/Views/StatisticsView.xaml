@@ -1,0 +1,93 @@
+﻿<UserControl x:Class="AI_AOI.Views.StatisticsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             Background="{StaticResource AppPanelBackgroundBrush}">
+
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="250"/>
+        </Grid.ColumnDefinitions>
+
+        <Grid Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Background="#808080">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="50"/>
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="tbSearchBarcode" Grid.Column="0" Style="{StaticResource AppFilterTextBoxStyle}" ToolTip="Search by barcode"/>
+                <Button x:Name="btnSearch" Grid.Column="1" Content="Search" Style="{StaticResource AppToolbarButtonStyle}"/>
+            </Grid>
+            <DataGrid x:Name="dgStatistics"
+              Grid.Row="1"
+              Style="{StaticResource AppDataGridStyle}"
+              AutoGenerateColumns="False"
+              CanUserAddRows="False"
+              IsReadOnly="True"
+              SelectionMode="Single"
+              SelectionUnit="FullRow"
+              HeadersVisibility="Column">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="ID" Binding="{Binding No}"/>
+                    <DataGridTextColumn Header="Inspected Date" Binding="{Binding InspectedDate, StringFormat=yyyy/MM/dd HH:mm:ss}"/>
+                    <DataGridTextColumn Header="Barcode" Binding="{Binding Barcode}"/>
+                    <DataGridTextColumn Header="Component Count" Binding="{Binding ComponentCountDisplay}"/>
+                    <DataGridTextColumn Header="Global Matching" Binding="{Binding GlobalMatchingCount}"/>
+                    <DataGridTextColumn Header="Alarm Mark Count" Binding="{Binding MarkCount}"/>
+                    <DataGridTextColumn Header="Bad Block Count" Binding="{Binding BadBlockCount}"/>
+                    <DataGridTextColumn Header="Board Name" Binding="{Binding BoardName}"/>
+                    <DataGridTextColumn Header="Product Lots" Binding="{Binding ProductLot}"/>
+                    <DataGridTextColumn Header="Line" Binding="{Binding Line}"/>
+                    <DataGridTextColumn Header="Station" Binding="{Binding Station}"/>
+                    <DataGridTextColumn Header="Operator" Binding="{Binding Operator}"/>
+                    <DataGridTextColumn Header="Rail" Binding="{Binding Rail}"/>
+                    <DataGridTextColumn Header="Side" Binding="{Binding Side}"/>
+                    <DataGridTextColumn Header="NG Buffer" Binding="{Binding NgBuffer}"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+
+
+        <Grid Grid.Column="1" Background="#808080">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Margin="8">
+                <TextBox x:Name="tbFilterBoard" Style="{StaticResource AppFilterTextBoxStyle}" ToolTip="Filter by board name"/>
+                <TextBox x:Name="tbFilterLine" Style="{StaticResource AppFilterTextBoxStyle}" ToolTip="Filter by line"/>
+                <TextBox x:Name="tbFilterProductLot" Style="{StaticResource AppFilterTextBoxStyle}" ToolTip="Filter by product lot"/>
+                <TextBox x:Name="tbFilterStation" Style="{StaticResource AppFilterTextBoxStyle}" ToolTip="Filter by station"/>
+                <Button x:Name="btnApplyFilter" Content="Apply Filter" Style="{StaticResource AppToolbarButtonStyle}"/>
+            </StackPanel>
+
+            <Border Grid.Row="1" Background="#424242" Margin="3">
+                <StackPanel>
+                    <TextBlock x:Name="tbQtyInspectedPCBs" Style="{StaticResource AppSummaryTextStyle}" Text="Qty. Of Inspected PCBs &#x9;&#x9;0"/>
+                    <TextBlock x:Name="tbQtyOfNgPCBs" Style="{StaticResource AppSummaryTextStyle}" Text="Qty. Of NG PCBs &#x9;&#x9;&#x9;0"/>
+                    <TextBlock x:Name="tbIpy" Style="{StaticResource AppSummaryTextStyle}" Text="IPY &#x9;&#x9;&#x9;&#x9;0.00%"/>
+                    <TextBlock x:Name="tbFpy" Style="{StaticResource AppSummaryTextStyle}" Text="FPY &#x9;&#x9;&#x9;&#x9;0%"/>
+                    <TextBlock x:Name="tbNgPcbRate" Style="{StaticResource AppSummaryTextStyle}" Text="NG PCB Rate &#x9;&#x9;&#x9;0.00%"/>
+                    <TextBlock x:Name="tbQtyInspectedComponents" Style="{StaticResource AppSummaryTextStyle}" Text="Qty. Of Inspected Components &#x9;0"/>
+                    <TextBlock x:Name="tbQtyOfNgAoiComponents" Style="{StaticResource AppSummaryTextStyle}" Text="Qty. Of NG AOI Components &#x9;0"/>
+                    <TextBlock x:Name="tbQtyOfNgComponents" Style="{StaticResource AppSummaryTextStyle}" Text="Qty. Of NG Components &#x9;&#x9;0"/>
+                    <TextBlock x:Name="tbNgComponentRate" Style="{StaticResource AppSummaryTextStyle}" Text="NG Component Rate &#x9;&#x9;0.00%"/>
+                    <TextBlock x:Name="tbNgAoiComponentRate" Style="{StaticResource AppSummaryTextStyle}" Text="NG AOI Component Rate &#x9;&#x9;0.00%"/>
+                   
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+
+</UserControl>

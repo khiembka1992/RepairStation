@@ -1,0 +1,223 @@
+﻿<?xml version="1.0" encoding="utf-8"?><Database Name="HOLLY-AOI-REPAIR-AI" Class="RepairAIDataContext" xmlns="http://schemas.microsoft.com/linqtosql/dbml/2007">
+  <Connection Mode="AppSettings" ConnectionString="Data Source=DESKTOP-CNKEHT4;Initial Catalog=HOLLY-AOI-REPAIR-AI;Integrated Security=True;Connect Timeout=30;Encrypt=True;Trust Server Certificate=True" SettingsObjectName="AI_AOI.Properties.Settings" SettingsPropertyName="HOLLY_AOI_REPAIR_AIConnectionString" Provider="System.Data.SqlClient" />
+  <Table Name="dbo.Alarm" Member="Alarms">
+    <Type Name="Alarm">
+      <Column Name="ID" Type="System.Guid" DbType="UniqueIdentifier NOT NULL" IsPrimaryKey="true" CanBeNull="false" />
+      <Column Name="DefectType" Type="System.String" DbType="NVarChar(255) NOT NULL" CanBeNull="false" />
+      <Column Name="AlarmType" Type="System.String" DbType="NVarChar(255) NOT NULL" CanBeNull="false" />
+      <Column Name="TopImage" Type="System.Data.Linq.Binary" DbType="VarBinary(MAX)" CanBeNull="true" UpdateCheck="Never" />
+      <Column Name="SideImage" Type="System.Data.Linq.Binary" DbType="VarBinary(MAX)" CanBeNull="true" UpdateCheck="Never" />
+      <Column Name="ImageWidth" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="ImageHeight" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="Width" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="Height" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="Angle" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="X" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="Y" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="ComponentPart" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="ComponentID" Type="System.Guid" DbType="UniqueIdentifier NOT NULL" CanBeNull="false" />
+      <Column Name="ActualValue" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="SettingValue" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Association Name="Component_Alarm" Member="Component" ThisKey="ComponentID" OtherKey="ID" Type="Component" IsForeignKey="true" DeleteRule="CASCADE" DeleteOnNull="true" />
+    </Type>
+  </Table>
+  <Table Name="dbo.BadMark" Member="BadMarks">
+    <Type Name="BadMark">
+      <Column Name="ID" Type="System.Guid" DbType="UniqueIdentifier NOT NULL" IsPrimaryKey="true" CanBeNull="false" />
+      <Column Name="Name" Type="System.String" DbType="NVarChar(255) NOT NULL" CanBeNull="false" />
+      <Column Name="X" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="Y" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="BlockID" Type="System.Guid" DbType="UniqueIdentifier NOT NULL" CanBeNull="false" />
+      <Association Name="Block_BadMark" Member="Block" ThisKey="BlockID" OtherKey="ID" Type="Block" IsForeignKey="true" DeleteRule="CASCADE" DeleteOnNull="true" />
+    </Type>
+  </Table>
+  <Table Name="dbo.Barcode" Member="Barcodes">
+    <Type Name="Barcode">
+      <Column Name="ID" Type="System.Guid" DbType="UniqueIdentifier NOT NULL" IsPrimaryKey="true" CanBeNull="false" />
+      <Column Name="Name" Type="System.String" DbType="NVarChar(255) NOT NULL" CanBeNull="false" />
+      <Column Name="X" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="Y" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="CodeText" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="Validator" Type="System.String" DbType="NVarChar(MAX)" CanBeNull="true" />
+      <Column Name="TopImage" Type="System.Data.Linq.Binary" DbType="VarBinary(MAX)" CanBeNull="true" UpdateCheck="Never" />
+      <Column Name="SideImage" Type="System.Data.Linq.Binary" DbType="VarBinary(MAX)" CanBeNull="true" UpdateCheck="Never" />
+      <Column Name="Angle" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="BlockID" Type="System.Guid" DbType="UniqueIdentifier NOT NULL" CanBeNull="false" />
+      <Association Name="Block_Barcode" Member="Block" ThisKey="BlockID" OtherKey="ID" Type="Block" IsForeignKey="true" DeleteRule="CASCADE" DeleteOnNull="true" />
+    </Type>
+  </Table>
+  <Table Name="dbo.Block" Member="Blocks">
+    <Type Name="Block">
+      <Column Name="ID" Type="System.Guid" DbType="UniqueIdentifier NOT NULL" IsPrimaryKey="true" CanBeNull="false" />
+      <Column Name="Number" Type="System.Int32" DbType="Int NOT NULL" CanBeNull="false" />
+      <Column Name="Name" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="Side" Type="System.Char" DbType="NChar(1) NOT NULL" CanBeNull="false" />
+      <Column Name="TotalComponentCount" Type="System.Int32" DbType="Int NOT NULL" CanBeNull="false" />
+      <Column Name="InspectionID" Type="System.Guid" DbType="UniqueIdentifier NOT NULL" CanBeNull="false" />
+      <Association Name="Block_BadMark" Member="BadMarks" ThisKey="ID" OtherKey="BlockID" Type="BadMark" />
+      <Association Name="Block_Barcode" Member="Barcodes" ThisKey="ID" OtherKey="BlockID" Type="Barcode" />
+      <Association Name="Block_Component" Member="Components" ThisKey="ID" OtherKey="BlockID" Type="Component" />
+      <Association Name="Block_ComponentOffset" Member="ComponentOffsets" ThisKey="ID" OtherKey="BlockID" Type="ComponentOffset" />
+      <Association Name="Block_Mark" Member="Marks" ThisKey="ID" OtherKey="BlockID" Type="Mark" />
+      <Association Name="Inspection_Block" Member="Inspection" ThisKey="InspectionID" OtherKey="ID" Type="Inspection" IsForeignKey="true" DeleteRule="CASCADE" DeleteOnNull="true" />
+    </Type>
+  </Table>
+  <Table Name="dbo.CompAlarm" Member="CompAlarms">
+    <Type Name="CompAlarm">
+      <Column Name="InspectionID" Type="System.Guid" DbType="UniqueIdentifier NOT NULL" CanBeNull="false" />
+      <Column Name="Name" Type="System.String" DbType="NVarChar(255) NOT NULL" CanBeNull="false" />
+      <Column Name="Number" Type="System.Int32" DbType="Int NOT NULL" CanBeNull="false" />
+      <Column Name="Library" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+    </Type>
+  </Table>
+  <Table Name="dbo.Component" Member="Components">
+    <Type Name="Component">
+      <Column Name="ID" Type="System.Guid" DbType="UniqueIdentifier NOT NULL" IsPrimaryKey="true" CanBeNull="false" />
+      <Column Name="Name" Type="System.String" DbType="NVarChar(255) NOT NULL" CanBeNull="false" />
+      <Column Name="X" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="Y" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="Library" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="IsVirtual" Type="System.Boolean" DbType="Bit NOT NULL" CanBeNull="false" />
+      <Column Name="Angle" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="ImageWidth" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="ImageHeight" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="TopImage" Type="System.Data.Linq.Binary" DbType="VarBinary(MAX)" CanBeNull="true" UpdateCheck="Never" />
+      <Column Name="SideImage" Type="System.Data.Linq.Binary" DbType="VarBinary(MAX)" CanBeNull="true" UpdateCheck="Never" />
+      <Column Name="TopReferenceImage" Type="System.Data.Linq.Binary" DbType="VarBinary(MAX)" CanBeNull="true" UpdateCheck="Never" />
+      <Column Name="SideReferenceImage" Type="System.Data.Linq.Binary" DbType="VarBinary(MAX)" CanBeNull="true" UpdateCheck="Never" />
+      <Column Name="Machine" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="BlockID" Type="System.Guid" DbType="UniqueIdentifier NOT NULL" CanBeNull="false" />
+      <Column Name="Catalog" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="Feeder" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="Nozzle" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Association Name="Component_Alarm" Member="Alarms" ThisKey="ID" OtherKey="ComponentID" Type="Alarm" />
+      <Association Name="Block_Component" Member="Block" ThisKey="BlockID" OtherKey="ID" Type="Block" IsForeignKey="true" DeleteRule="CASCADE" DeleteOnNull="true" />
+    </Type>
+  </Table>
+  <Table Name="dbo.ComponentOffset" Member="ComponentOffsets">
+    <Type Name="ComponentOffset">
+      <Column Name="ID" Type="System.Guid" DbType="UniqueIdentifier NOT NULL" IsPrimaryKey="true" CanBeNull="false" />
+      <Column Name="Name" Type="System.String" DbType="NVarChar(255) NOT NULL" CanBeNull="false" />
+      <Column Name="Library" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="Machine" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="Head" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="Nozzle" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="Feeder" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="OffsetX" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="OffsetY" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="OffsetRotation" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="BlockID" Type="System.Guid" DbType="UniqueIdentifier NOT NULL" CanBeNull="false" />
+      <Association Name="Block_ComponentOffset" Member="Block" ThisKey="BlockID" OtherKey="ID" Type="Block" IsForeignKey="true" DeleteRule="CASCADE" DeleteOnNull="true" />
+    </Type>
+  </Table>
+  <Table Name="dbo.CycleStop" Member="CycleStops">
+    <Type Name="CycleStop">
+      <Column Name="CycleStopType" Type="System.String" DbType="NVarChar(255) NOT NULL" IsPrimaryKey="true" CanBeNull="false" />
+      <Column Name="StopFlag1" Type="System.Int32" DbType="Int NOT NULL" CanBeNull="false" />
+      <Column Name="StopFlag2" Type="System.Int32" DbType="Int NOT NULL" CanBeNull="false" />
+      <Column Name="StopFlag3" Type="System.Int32" DbType="Int NOT NULL" CanBeNull="false" />
+      <Column Name="StopFlag4" Type="System.Int32" DbType="Int NOT NULL" CanBeNull="false" />
+      <Column Name="LastStopTime" Type="System.DateTime" DbType="DateTime" CanBeNull="true" />
+    </Type>
+  </Table>
+  <Table Name="dbo.DefectMaster" Member="DefectMasters">
+    <Type Name="DefectMaster">
+      <Column Name="Defect" Type="System.String" DbType="NVarChar(255) NOT NULL" IsPrimaryKey="true" CanBeNull="false" />
+      <Column Name="DefectName" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="USIDefect" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="InventecDefect" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="CMDefect" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="BYDDefect" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="SamsungDefect" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="FoxconnDefect" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="SimploDefect" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="AUXDefect" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="WongsDefect" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="BYD9Defect" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="FoxconnLHDefect" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="FoxconnTJDefect" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="HisenseDefect" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="XaviDefect" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="HodgenDefect" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="BluewayDefect" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="VietnamDefect" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="HARMANDefect" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="HETDefect" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="YangHaoDefect" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="GBMDefect" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="LHDefect" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="LangFangDefect" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="CompalDefect" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="PlotechDefect" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="ChuanQiDefect" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="F8Defect" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+    </Type>
+  </Table>
+  <Table Name="dbo.GlobalMatchingAlarm" Member="GlobalMatchingAlarms">
+    <Type Name="GlobalMatchingAlarm">
+      <Column Name="ID" Type="System.Guid" DbType="UniqueIdentifier NOT NULL" IsPrimaryKey="true" CanBeNull="false" />
+      <Column Name="DefectType" Type="System.String" DbType="NVarChar(255) NOT NULL" CanBeNull="false" />
+      <Column Name="TopImage" Type="System.Data.Linq.Binary" DbType="VarBinary(MAX)" CanBeNull="true" UpdateCheck="Never" />
+      <Column Name="SideImage" Type="System.Data.Linq.Binary" DbType="VarBinary(MAX)" CanBeNull="true" UpdateCheck="Never" />
+      <Column Name="ImageWidth" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="ImageHeight" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="Width" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="Height" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="X" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="Y" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="InspectionID" Type="System.Guid" DbType="UniqueIdentifier NOT NULL" CanBeNull="false" />
+      <Association Name="Inspection_GlobalMatchingAlarm" Member="Inspection" ThisKey="InspectionID" OtherKey="ID" Type="Inspection" IsForeignKey="true" DeleteRule="CASCADE" DeleteOnNull="true" />
+    </Type>
+  </Table>
+  <Table Name="dbo.Inspection" Member="Inspections">
+    <Type Name="Inspection">
+      <Column Name="ID" Type="System.Guid" DbType="UniqueIdentifier NOT NULL" IsPrimaryKey="true" CanBeNull="false" />
+      <Column Name="BoardName" Type="System.String" DbType="NVarChar(255) NOT NULL" CanBeNull="false" />
+      <Column Name="BoardWidth" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="BoardHeight" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="InspectionDateTime" Type="System.DateTime" DbType="DateTime NOT NULL" CanBeNull="false" />
+      <Column Name="BoardImage" Type="System.Data.Linq.Binary" DbType="VarBinary(MAX)" CanBeNull="true" UpdateCheck="Never" />
+      <Column Name="GlobalMatchingSampleCount" Type="System.Int32" DbType="Int" CanBeNull="true" />
+      <Column Name="LogonID" Type="System.String" DbType="NVarChar(255) NOT NULL" CanBeNull="false" />
+      <Column Name="Operator" Type="System.String" DbType="NVarChar(255) NOT NULL" CanBeNull="false" />
+      <Column Name="Shift" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="Line" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="ProductLot" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="Station" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Column Name="Status" Type="System.Int32" DbType="Int NOT NULL" CanBeNull="false" />
+      <Column Name="RailID" Type="System.Int32" DbType="Int NOT NULL" CanBeNull="false" />
+      <Column Name="Side" Type="System.String" DbType="NVarChar(1) NOT NULL" CanBeNull="false" />
+      <Column Name="CycleTime" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="Rack" Type="System.String" DbType="NVarChar(2)" CanBeNull="true" />
+      <Column Name="HETMode" Type="System.Int32" DbType="Int NOT NULL" CanBeNull="false" />
+      <Association Name="Inspection_Block" Member="Blocks" ThisKey="ID" OtherKey="InspectionID" Type="Block" />
+      <Association Name="Inspection_GlobalMatchingAlarm" Member="GlobalMatchingAlarms" ThisKey="ID" OtherKey="InspectionID" Type="GlobalMatchingAlarm" />
+    </Type>
+  </Table>
+  <Table Name="dbo.LogonUser" Member="LogonUsers">
+    <Type Name="LogonUser">
+      <Column Name="UserID" Type="System.String" DbType="NVarChar(255) NOT NULL" CanBeNull="false" />
+      <Column Name="Password" Type="System.String" DbType="NVarChar(255) NOT NULL" CanBeNull="false" />
+    </Type>
+  </Table>
+  <Table Name="dbo.Mark" Member="Marks">
+    <Type Name="Mark">
+      <Column Name="ID" Type="System.Guid" DbType="UniqueIdentifier NOT NULL" IsPrimaryKey="true" CanBeNull="false" />
+      <Column Name="Name" Type="System.String" DbType="NVarChar(255) NOT NULL" CanBeNull="false" />
+      <Column Name="X" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="Y" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+      <Column Name="Type" Type="System.Int32" DbType="Int NOT NULL" CanBeNull="false" />
+      <Column Name="BlockID" Type="System.Guid" DbType="UniqueIdentifier NOT NULL" CanBeNull="false" />
+      <Association Name="Block_Mark" Member="Block" ThisKey="BlockID" OtherKey="ID" Type="Block" IsForeignKey="true" DeleteRule="CASCADE" DeleteOnNull="true" />
+    </Type>
+  </Table>
+  <Table Name="dbo.RepairCentralControl" Member="RepairCentralControls">
+    <Type Name="RepairCentralControl">
+      <Column Name="ID" Type="System.Guid" DbType="UniqueIdentifier NOT NULL" IsPrimaryKey="true" CanBeNull="false" />
+      <Column Name="Station" Type="System.String" DbType="NVarChar(255) NOT NULL" CanBeNull="false" />
+      <Column Name="RailID" Type="System.Int32" DbType="Int NOT NULL" CanBeNull="false" />
+      <Column Name="InspectionDateTime" Type="System.DateTime" DbType="DateTime NOT NULL" CanBeNull="false" />
+      <Column Name="StopFlag" Type="System.Int32" DbType="Int NOT NULL" CanBeNull="false" />
+    </Type>
+  </Table>
+</Database>
