@@ -6,7 +6,7 @@
         WindowStartupLocation="CenterScreen"
         mc:Ignorable="d"
         Title="Software Settings"
-        Height="300"
+        Height="360"
         Width="800"
         Background="{StaticResource AppScreenBackgroundBrush}"
         Foreground="{StaticResource AppTextPrimaryBrush}">
@@ -14,6 +14,8 @@
         <Border Padding="10">
             <Grid>
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
@@ -39,6 +41,12 @@
 
                 <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Center" Text="Font Size"/>
                 <TextBox Grid.Row="4" Grid.Column="1" Width="120" HorizontalAlignment="Left" Text="{Binding FontSize}" Style="{StaticResource AppFilterTextBoxStyle}"/>
+
+                <TextBlock Grid.Row="5" Grid.Column="0" VerticalAlignment="Center" Text="History Data Root"/>
+                <TextBox Grid.Row="5" Grid.Column="1" Margin="0,0,12,8" Text="{Binding HistoryDataRootPath}" Style="{StaticResource AppFilterTextBoxStyle}"/>
+
+                <TextBlock Grid.Row="6" Grid.Column="0" VerticalAlignment="Center" Text="Image Data Root"/>
+                <TextBox Grid.Row="6" Grid.Column="1" Margin="0,0,12,8" Text="{Binding ImageDataRootPath}" Style="{StaticResource AppFilterTextBoxStyle}"/>
             </Grid>
         </Border>
     </Grid>

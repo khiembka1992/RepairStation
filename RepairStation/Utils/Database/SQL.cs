@@ -229,7 +229,7 @@ INNER JOIN dbo.Component c ON c.ID = a.ComponentID
 INNER JOIN dbo.Block b ON b.ID = c.BlockID
 WHERE b.InspectionID = @InspectionID;", conn, tx))
                         {
-                            resetCmd.Parameters.AddWithValue("@InspectionID", inspectionId);
+                            resetCmd.Parameters.Add("@InspectionID", System.Data.SqlDbType.UniqueIdentifier).Value = inspectionId;
                             resetCmd.ExecuteNonQuery();
                         }
 
@@ -244,7 +244,7 @@ INNER JOIN dbo.Block b ON b.ID = c.BlockID
 WHERE b.InspectionID = @InspectionID
   AND a.ComponentID = @ComponentID;", conn, tx))
                             {
-                                setCmd.Parameters.AddWithValue("@InspectionID", inspectionId);
+                                setCmd.Parameters.Add("@InspectionID", System.Data.SqlDbType.UniqueIdentifier).Value = inspectionId;
                                 var defectParam = setCmd.Parameters.Add("@DefectType", System.Data.SqlDbType.NVarChar, 200);
                                 var componentParam = setCmd.Parameters.Add("@ComponentID", System.Data.SqlDbType.UniqueIdentifier);
 
@@ -273,7 +273,7 @@ WHERE b.InspectionID = @InspectionID
         {
             using (var cmd = new SqlCommand(sql, conn, tx))
             {
-                cmd.Parameters.AddWithValue("@InspectionID", inspectionId);
+                cmd.Parameters.Add("@InspectionID", System.Data.SqlDbType.UniqueIdentifier).Value = inspectionId;
                 cmd.ExecuteNonQuery();
             }
         }
@@ -360,7 +360,7 @@ ORDER BY tcol.column_id;";
             var result = new List<CopyColumn>();
             using (var cmd = new SqlCommand(sql, conn, tx))
             {
-                cmd.Parameters.AddWithValue("@TableName", tableName);
+                cmd.Parameters.Add("@TableName", System.Data.SqlDbType.NVarChar, 128).Value = tableName ?? string.Empty;
                 using (var reader = cmd.ExecuteReader())
                 {
                     while (reader.Read())

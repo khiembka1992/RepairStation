@@ -445,6 +445,7 @@ namespace AI_AOI.Views {
                     SideReferenceImageBytes = defect.SideReferenceImageBytes,
                     AlarmTopImageBytes = defect.AlarmTopImageBytes,
                     AlarmSideImageBytes = defect.AlarmSideImageBytes,
+                    AlarmInfors = defect.AlarmInfors?.ToList() ?? new List<AlarmImageInfo>(),
                     AlarmTypes = defect.AlarmTypes?.Distinct().ToList() ?? new List<string>()
                 });
 
@@ -865,11 +866,13 @@ namespace AI_AOI.Views {
 
             var nextButton = new Button
             {
-                Content = $"Next ({AlarmTypePageIndex + 1}/{Math.Max(1, pageCount)}) (.)",
-                Margin = new Thickness(4),
+                Content = BuildConfirmButtonContent($"Next ({AlarmTypePageIndex + 1}/{Math.Max(1, pageCount)})", "."),
+                Margin = new Thickness(1),
                 MinHeight = 42,
                 FontSize = 20,
                 FontWeight = FontWeights.SemiBold,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                VerticalContentAlignment = VerticalAlignment.Stretch,
                 Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(62, 92, 120)),
                 Foreground = Brushes.White,
                 IsEnabled = pageCount > 1
@@ -1047,11 +1050,13 @@ namespace AI_AOI.Views {
 
             var button = new Button
             {
-                Content = BuildConfirmButtonCaption(caption, shortcut),
-                Margin = new Thickness(4),
+                Content = BuildConfirmButtonContent(caption, shortcut),
+                Margin = new Thickness(1),
                 MinHeight = 48,
                 FontSize = 24,
                 FontWeight = FontWeights.SemiBold,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                VerticalContentAlignment = VerticalAlignment.Stretch,
                 Tag = new ConfirmChoice
                 {
                     HasIssue = hasIssue == true,
@@ -1087,11 +1092,34 @@ namespace AI_AOI.Views {
             gButtons.Children.Add(button);
         }
 
-        private string BuildConfirmButtonCaption(string caption, string shortcut)
+        private object BuildConfirmButtonContent(string caption, string shortcut)
         {
-            var text = (caption ?? string.Empty).Trim();
-            if (string.IsNullOrWhiteSpace(shortcut)) return text;
-            return $"{text} ({shortcut})";
+            var root = new Grid();
+
+            var mainText = new TextBlock
+            {
+                Text = (caption ?? string.Empty).Trim(),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                TextWrapping = TextWrapping.Wrap,
+                TextAlignment = TextAlignment.Center
+            };
+            root.Children.Add(mainText);
+
+            if (!string.IsNullOrWhiteSpace(shortcut))
+            {
+                var shortcutText = new TextBlock
+                {
+                    Text = shortcut,
+                    FontSize = 12,
+                    FontWeight = FontWeights.Normal,
+                    HorizontalAlignment = HorizontalAlignment.Left,
+                    VerticalAlignment = VerticalAlignment.Top
+                };
+                root.Children.Add(shortcutText);
+            }
+
+            return root;
         }
 
         private bool TryConfirmByShortcut(string shortcut)
@@ -1381,6 +1409,12 @@ namespace AI_AOI.Views {
             }
 
             var defectByComponent = BuildDefectMapForCurrentInspection();
+            if (!TrySaveCurrentInspectionImageLogs(out var imageLogError))
+            {
+                UILib.ShowError($"Save inspection image logs failed: {imageLogError}");
+                return;
+            }
+
             if (!SQL.CommitAndMoveInspection(CurrentDisplayInfor.InspectionID, defectByComponent, out var error))
             {
                 UILib.ShowError($"Commit/move inspection failed: {error}");
@@ -1627,6 +1661,124 @@ namespace AI_AOI.Views {
 
             return map;
         }
+
+        private bool TrySaveCurrentInspectionImageLogs(out string error)
+        {
+            error = null;
+            try
+            {
+                SaveCurrentInspectionImageLogs();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                Logger.Error(ex, "Save inspection image logs failed.");
+                return false;
+            }
+        }
+
+        private void SaveCurrentInspectionImageLogs()
+        {
+            if (CurrentDisplayInfor?.ComponentInfors == null) return;
+
+            string historyRoot = SoftwareSettingsManager.Current.HistoryDataRootPath;
+            string imageRoot = SoftwareSettingsManager.Current.ImageDataRootPath;
+            if (string.IsNullOrWhiteSpace(historyRoot) && string.IsNullOrWhiteSpace(imageRoot)) return;
+
+            DateTime inspectTime = CurrentDisplayInfor.InspectTime;
+            string compactDate = inspectTime.ToString("yyyyMMdd");
+            string imageDate = inspectTime.ToString("yyyy_MM_dd");
+            string timestamp = inspectTime.ToString("yyyyMMddHHmmss");
+            string boardName = SanitizePathPart(CurrentDisplayInfor.Model, "Board");
+            string panelSn = SanitizePathPart(CurrentDisplayInfor.SN, CurrentDisplayInfor.InspectionID.ToString());
+            string line = SanitizePathPart(CurrentDisplayInfor.Line, "Line");
+
+            int count = CurrentDisplayInfor.ComponentInfors.Count;
+            for (int i = 0; i < count; i++)
+            {
+                var component = CurrentDisplayInfor.ComponentInfors[i];
+                if (component?.AlarmInfors == null || component.AlarmInfors.Count == 0) continue;
+
+                string componentName = SanitizePathPart(component.Name, "Component");
+                string block = SanitizePathPart(component.BlockID.ToString(), "0");
+                string confirmType = GetConfirmedDefectType(i);
+                string resultFolder = IsConfirmedOk(i, confirmType) ? "RPASS" : "FAIL";
+
+                foreach (var alarm in component.AlarmInfors)
+                {
+                    if (alarm == null || alarm.AlarmID == Guid.Empty) continue;
+
+                    string alarmId = SanitizePathPart(alarm.AlarmID.ToString(), "Alarm");
+                    string alarmType = SanitizePathPart(alarm.AlarmType, confirmType);
+
+                    if (!string.IsNullOrWhiteSpace(historyRoot))
+                    {
+                        string historyFolder = Path.Combine(
+                            historyRoot,
+                            boardName,
+                            compactDate,
+                            $"{panelSn}_{timestamp}",
+                            "Alarm");
+                        SaveImageBytes(alarm.TopImageBytes, Path.Combine(historyFolder, $"{componentName}_{block}_{alarmId}_top.jpg"));
+                        SaveImageBytes(alarm.SideImageBytes, Path.Combine(historyFolder, $"{componentName}_{block}_{alarmId}_side.jpg"));
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(imageRoot))
+                    {
+                        string imageFolder = Path.Combine(imageRoot, resultFolder, boardName, imageDate);
+                        string imageBaseName = $"{line}_{panelSn}_{timestamp}_{componentName}@{block}_{alarmType}";
+                        SaveImageBytes(alarm.TopImageBytes, Path.Combine(imageFolder, $"{imageBaseName}_top.jpg"));
+                        SaveImageBytes(alarm.SideImageBytes, Path.Combine(imageFolder, $"{imageBaseName}_side.jpg"));
+                    }
+                }
+            }
+        }
+
+        private string GetConfirmedDefectType(int componentIndex)
+        {
+            string defectType = CurrentConfirmDefectTypes.ElementAtOrDefault(componentIndex);
+            if (!string.IsNullOrWhiteSpace(defectType))
+            {
+                return defectType.Trim();
+            }
+
+            return CurrentConfirmResults.ElementAtOrDefault(componentIndex) == true ? "NG" : "OK";
+        }
+
+        private bool IsConfirmedOk(int componentIndex, string defectType)
+        {
+            if (!string.IsNullOrWhiteSpace(defectType))
+            {
+                return string.Equals(defectType.Trim(), "OK", StringComparison.OrdinalIgnoreCase);
+            }
+
+            return CurrentConfirmResults.ElementAtOrDefault(componentIndex) != true;
+        }
+
+        private static void SaveImageBytes(byte[] imageBytes, string filePath)
+        {
+            if (imageBytes == null || imageBytes.Length == 0 || string.IsNullOrWhiteSpace(filePath)) return;
+
+            string folder = Path.GetDirectoryName(filePath);
+            if (!string.IsNullOrWhiteSpace(folder) && !Directory.Exists(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
+
+            File.WriteAllBytes(filePath, imageBytes);
+        }
+
+        private static string SanitizePathPart(string value, string fallback)
+        {
+            string safe = string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
+            foreach (char c in Path.GetInvalidFileNameChars())
+            {
+                safe = safe.Replace(c, '_');
+            }
+
+            return string.IsNullOrWhiteSpace(safe) ? fallback : safe;
+        }
     }
 
     public class ConfirmChoice
@@ -1660,6 +1812,7 @@ namespace AI_AOI.Views {
         public byte[] SideReferenceImageBytes { get; set; }
         public byte[] AlarmTopImageBytes { get; set; }
         public byte[] AlarmSideImageBytes { get; set; }
+        public List<AlarmImageInfo> AlarmInfors { get; set; } = new List<AlarmImageInfo>();
         public List<string> AlarmTypes { get; set; } = new List<string>();
     }
 

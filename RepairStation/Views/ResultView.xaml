@@ -59,11 +59,9 @@
                         <TextBlock x:Name="tbStatusShortcut"
                                 HorizontalAlignment="Left"
                                 VerticalAlignment="Top"
-                                Margin="0,0,16,12"
-                                Foreground="#E6E6E6"
-                                FontSize="22"
-                                FontWeight="SemiBold"
-                                Text="(Enter)"/>
+                                Foreground="White"
+                                FontSize="12"
+                                Text="Enter"/>
                     </Grid>
                 </Border>
             </Grid>

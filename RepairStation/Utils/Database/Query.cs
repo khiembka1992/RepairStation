@@ -30,13 +30,13 @@ namespace AI_AOI.Database
 
                     bool hasTop = topN > 0;
                     cmd.CommandText = BuildInspectionStatisticsSql(hasTop);
-                    cmd.Parameters.AddWithValue("@LineName", (object)(lineName ?? string.Empty));
-                    cmd.Parameters.AddWithValue("@FromTime", fromTime.HasValue ? (object)fromTime.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@ToTime", toTime.HasValue ? (object)toTime.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@BarcodeKeyword", (object)(barcodeKeyword ?? string.Empty));
+                    cmd.Parameters.Add("@LineName", SqlDbType.NVarChar, 100).Value = (object)(lineName ?? string.Empty);
+                    cmd.Parameters.Add("@FromTime", SqlDbType.DateTime).Value = fromTime.HasValue ? (object)fromTime.Value : DBNull.Value;
+                    cmd.Parameters.Add("@ToTime", SqlDbType.DateTime).Value = toTime.HasValue ? (object)toTime.Value : DBNull.Value;
+                    cmd.Parameters.Add("@BarcodeKeyword", SqlDbType.NVarChar, 200).Value = (object)(barcodeKeyword ?? string.Empty);
                     if (hasTop)
                     {
-                        cmd.Parameters.AddWithValue("@TopN", topN);
+                        cmd.Parameters.Add("@TopN", SqlDbType.Int).Value = topN;
                     }
 
                     using (var reader = cmd.ExecuteReader())
@@ -118,7 +118,7 @@ SELECT
     ) AS Barcode
 FROM dbo.Inspection i
 WHERE i.ID = @InspectionID;";
-                    cmd.Parameters.AddWithValue("@InspectionID", inspectionId);
+                    cmd.Parameters.Add("@InspectionID", SqlDbType.UniqueIdentifier).Value = inspectionId;
 
                     QueryResult ret = null;
                     using (var reader = cmd.ExecuteReader())
@@ -186,6 +186,7 @@ SELECT
     c.SideImage,
     c.TopReferenceImage,
     c.SideReferenceImage,
+    a.ID AS AlarmID,
     a.AlarmType,
     a.TopImage AS AlarmTopImage,
     a.SideImage AS AlarmSideImage
@@ -194,7 +195,7 @@ INNER JOIN dbo.Block b ON b.ID = c.BlockID
 LEFT JOIN dbo.Alarm a ON a.ComponentID = c.ID
 WHERE b.InspectionID = @InspectionID
 ORDER BY b.Number, c.Name, c.ID;";
-                cmd.Parameters.AddWithValue("@InspectionID", inspectionId);
+                cmd.Parameters.Add("@InspectionID", SqlDbType.UniqueIdentifier).Value = inspectionId;
 
                 using (var reader = cmd.ExecuteReader())
                 {
@@ -218,6 +219,7 @@ ORDER BY b.Number, c.Name, c.ID;";
                                 SideImageBytes = ReadBytes(reader, "SideImage"),
                                 TopReferenceImageBytes = ReadBytes(reader, "TopReferenceImage"),
                                 SideReferenceImageBytes = ReadBytes(reader, "SideReferenceImage"),
+                                AlarmInfors = new List<AlarmImageInfo>(),
                                 AlarmTypes = new List<string>()
                             };
 
@@ -226,6 +228,19 @@ ORDER BY b.Number, c.Name, c.ID;";
                         }
 
                         var alarmType = ReadString(reader, "AlarmType");
+                        int alarmIdOrdinal = reader.GetOrdinal("AlarmID");
+                        if (!reader.IsDBNull(alarmIdOrdinal))
+                        {
+                            var alarmInfo = new AlarmImageInfo
+                            {
+                                AlarmID = reader.GetGuid(alarmIdOrdinal),
+                                AlarmType = alarmType,
+                                TopImageBytes = ReadBytes(reader, "AlarmTopImage"),
+                                SideImageBytes = ReadBytes(reader, "AlarmSideImage")
+                            };
+                            defect.AlarmInfors.Add(alarmInfo);
+                        }
+
                         if (!string.IsNullOrWhiteSpace(alarmType))
                         {
                             var normalized = alarmType.Trim();
@@ -405,7 +420,16 @@ ORDER BY i.InspectionDateTime DESC;";
         public byte[] SideReferenceImageBytes { get; set; }
         public byte[] AlarmTopImageBytes { get; set; }
         public byte[] AlarmSideImageBytes { get; set; }
+        public List<AlarmImageInfo> AlarmInfors { get; set; } = new List<AlarmImageInfo>();
         public List<string> AlarmTypes { get; set; } = new List<string>();
+    }
+
+    public class AlarmImageInfo
+    {
+        public Guid AlarmID { get; set; }
+        public string AlarmType { get; set; }
+        public byte[] TopImageBytes { get; set; }
+        public byte[] SideImageBytes { get; set; }
     }
 
     public class InspectionStatisticRow

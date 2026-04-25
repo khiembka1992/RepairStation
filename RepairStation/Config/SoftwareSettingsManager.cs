@@ -12,6 +12,8 @@ namespace AI_AOI.Config
         public double ImageScale { get; set; }
         public int RectangleThickness { get; set; }
         public double FontSize { get; set; }
+        public string HistoryDataRootPath { get; set; }
+        public string ImageDataRootPath { get; set; }
 
         public SoftwareSettingsData Clone()
         {
@@ -98,7 +100,9 @@ namespace AI_AOI.Config
                 HOLLY_AOI_REPAIRConnectionString = string.Empty,
                 ImageScale = 0.1,
                 RectangleThickness = 5,
-                FontSize = 100
+                FontSize = 100,
+                HistoryDataRootPath = @"E:\HLAOI_HISTORYDATA",
+                ImageDataRootPath = @"E:\HLAOI_IMAGEDATA"
             };
         }
 
@@ -115,6 +119,10 @@ namespace AI_AOI.Config
                 data.RectangleThickness = 1;
             if (data.FontSize <= 0)
                 data.FontSize = 12;
+            if (string.IsNullOrWhiteSpace(data.HistoryDataRootPath))
+                data.HistoryDataRootPath = @"E:\HLAOI_HISTORYDATA";
+            if (string.IsNullOrWhiteSpace(data.ImageDataRootPath))
+                data.ImageDataRootPath = @"E:\HLAOI_IMAGEDATA";
         }
 
         private static void SaveInternal(SoftwareSettingsData data)
