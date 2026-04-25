@@ -58,6 +58,7 @@ namespace AI_AOI.Views {
         List<InspectionStatisticRow> StatisticsRows = new List<InspectionStatisticRow>();
         readonly SessionStatistics SessionStats = new SessionStatistics();
         readonly HashSet<Guid> SessionCountedInspectionIds = new HashSet<Guid>();
+        readonly Dictionary<string, int> RepeatedComponentRuntimeCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
         public MainWindow()
         {
@@ -1216,6 +1217,7 @@ namespace AI_AOI.Views {
                 Owner = this
             };
             lockWindow.ShowDialog();
+            RepeatedComponentRuntimeCounts[BuildRepeatedComponentKey(trigger.BoardName, trigger.ComponentName, trigger.Block)] = 0;
         }
 
         private RepeatedComponentLockTrigger FindRepeatedComponentLockTrigger(QueryResult queryResult)
@@ -1234,33 +1236,16 @@ namespace AI_AOI.Views {
                     ComponentName = x.Name.Trim(),
                     Block = x.Block
                 })
-                .GroupBy(x => BuildRepeatedComponentKey(x.ComponentName, x.Block), StringComparer.OrdinalIgnoreCase)
+                .GroupBy(x => BuildRepeatedComponentKey(boardName, x.ComponentName, x.Block), StringComparer.OrdinalIgnoreCase)
                 .Select(g => g.First())
                 .ToList();
             if (candidates.Count == 0) return null;
 
             foreach (var candidate in candidates)
             {
-                int count = 1;
-                try
-                {
-                    count += Query.CountConfirmedRepeatedComponentStreak(
-                        boardName,
-                        queryResult.Time,
-                        candidate.ComponentName,
-                        candidate.Block,
-                        threshold - 1);
-                }
-                catch (Exception ex)
-                {
-                    Logger.Warn(
-                        ex,
-                        "Failed to check confirmed repeated component streak for {0} {1}@{2}.",
-                        boardName,
-                        candidate.ComponentName,
-                        candidate.Block);
-                    continue;
-                }
+                string key = BuildRepeatedComponentKey(boardName, candidate.ComponentName, candidate.Block);
+                int confirmedCount = RepeatedComponentRuntimeCounts.TryGetValue(key, out var value) ? value : 0;
+                int count = confirmedCount + 1;
 
                 if (count >= threshold)
                 {
@@ -1277,9 +1262,46 @@ namespace AI_AOI.Views {
             return null;
         }
 
-        private static string BuildRepeatedComponentKey(string componentName, int block)
+        private void UpdateRepeatedComponentRuntimeCountsForCurrentInspection()
         {
-            return $"{(componentName ?? string.Empty).Trim()}|{block}";
+            if (CurrentDisplayInfor == null) return;
+
+            string boardName = (CurrentDisplayInfor.Model ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(boardName)) return;
+
+            var currentKeys = (CurrentDisplayInfor.ComponentInfors ?? new List<ComponentInfor>())
+                .Where(x => !string.IsNullOrWhiteSpace(x?.Name))
+                .Select(x => BuildRepeatedComponentKey(boardName, x.Name, x.BlockID))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var boardPrefix = BuildRepeatedComponentBoardPrefix(boardName);
+            var keysToReset = RepeatedComponentRuntimeCounts.Keys
+                .Where(x => x.StartsWith(boardPrefix, StringComparison.OrdinalIgnoreCase) &&
+                            !currentKeys.Contains(x, StringComparer.OrdinalIgnoreCase))
+                .ToList();
+
+            foreach (var key in keysToReset)
+            {
+                RepeatedComponentRuntimeCounts[key] = 0;
+            }
+
+            foreach (var key in currentKeys)
+            {
+                RepeatedComponentRuntimeCounts[key] = RepeatedComponentRuntimeCounts.TryGetValue(key, out var count)
+                    ? count + 1
+                    : 1;
+            }
+        }
+
+        private static string BuildRepeatedComponentKey(string boardName, string componentName, int block)
+        {
+            return $"{BuildRepeatedComponentBoardPrefix(boardName)}{(componentName ?? string.Empty).Trim()}|{block}";
+        }
+
+        private static string BuildRepeatedComponentBoardPrefix(string boardName)
+        {
+            return $"{(boardName ?? string.Empty).Trim()}|";
         }
 
 
@@ -1503,6 +1525,7 @@ namespace AI_AOI.Views {
                 return;
             }
 
+            UpdateRepeatedComponentRuntimeCountsForCurrentInspection();
             AccumulateSessionStatisticsForCurrentInspection();
             LoadStatisticsData();
             if (TryOpenFirstPendingInspection()) return;
