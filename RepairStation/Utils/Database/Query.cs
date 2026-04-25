@@ -268,6 +268,67 @@ ORDER BY b.Number, c.Name, c.ID;";
                 .ToList();
         }
 
+        public static int CountConfirmedRepeatedComponentStreak(
+            string boardName,
+            DateTime beforeTime,
+            string componentName,
+            int block,
+            int maxPreviousCount)
+        {
+            if (string.IsNullOrWhiteSpace(boardName) ||
+                string.IsNullOrWhiteSpace(componentName) ||
+                maxPreviousCount <= 0)
+            {
+                return 0;
+            }
+
+            int count = 0;
+            string connStr = SoftwareSettingsManager.Current.HOLLY_AOI_REPAIRConnectionString;
+            using (var conn = new SqlConnection(connStr))
+            using (var cmd = conn.CreateCommand())
+            {
+                conn.Open();
+                cmd.CommandText = @"
+SELECT TOP (@MaxRows)
+    CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM dbo.Block b
+            INNER JOIN dbo.Component c ON c.BlockID = b.ID
+            INNER JOIN dbo.Alarm a ON a.ComponentID = c.ID
+            WHERE b.InspectionID = i.ID
+              AND b.Number = @Block
+              AND c.Name = @ComponentName
+        ) THEN 1
+        ELSE 0
+    END AS HasComponent
+FROM dbo.Inspection i
+WHERE i.BoardName = @BoardName
+  AND i.InspectionDateTime < @BeforeTime
+ORDER BY i.InspectionDateTime DESC;";
+                cmd.Parameters.Add("@MaxRows", SqlDbType.Int).Value = maxPreviousCount;
+                cmd.Parameters.Add("@BoardName", SqlDbType.NVarChar, 255).Value = boardName.Trim();
+                cmd.Parameters.Add("@BeforeTime", SqlDbType.DateTime).Value = beforeTime;
+                cmd.Parameters.Add("@Block", SqlDbType.Int).Value = block;
+                cmd.Parameters.Add("@ComponentName", SqlDbType.NVarChar, 255).Value = componentName.Trim();
+
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        if (!ReadBool(reader, "HasComponent"))
+                        {
+                            break;
+                        }
+
+                        count++;
+                    }
+                }
+            }
+
+            return count;
+        }
+
         private static string BuildInspectionStatisticsSql(bool hasTop)
         {
             var topClause = hasTop ? "TOP (@TopN)" : string.Empty;

@@ -1194,10 +1194,92 @@ namespace AI_AOI.Views {
 
             var rowMeta = StatisticsRows.FirstOrDefault(x => x.InspectionID == inspectionId);
             CurrentDisplayInfor = BuildDisplayInfor(queryResult, rowMeta);
+            ShowRepeatedComponentLockIfNeeded(queryResult);
             StopStatisticsPolling();
             MainScreenHost.Content = OperationScreen;
             DisplayProcess();
             return true;
+        }
+
+        private void ShowRepeatedComponentLockIfNeeded(QueryResult queryResult)
+        {
+            var trigger = FindRepeatedComponentLockTrigger(queryResult);
+            if (trigger == null) return;
+
+            var lockWindow = new RepeatedComponentLockWindow(
+                trigger.BoardName,
+                trigger.ComponentName,
+                trigger.Block,
+                trigger.Count,
+                SoftwareSettingsManager.Current.RepeatedComponentUnlockPassword)
+            {
+                Owner = this
+            };
+            lockWindow.ShowDialog();
+        }
+
+        private RepeatedComponentLockTrigger FindRepeatedComponentLockTrigger(QueryResult queryResult)
+        {
+            int threshold = SoftwareSettingsManager.Current.RepeatedComponentLockCount;
+            if (threshold <= 0) threshold = 8;
+            if (queryResult?.DefectLocations == null || queryResult.DefectLocations.Count == 0) return null;
+
+            string boardName = (queryResult.BoardName ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(boardName)) return null;
+
+            var candidates = queryResult.DefectLocations
+                .Where(x => !string.IsNullOrWhiteSpace(x?.Name))
+                .Select(x => new RepeatedComponentKey
+                {
+                    ComponentName = x.Name.Trim(),
+                    Block = x.Block
+                })
+                .GroupBy(x => BuildRepeatedComponentKey(x.ComponentName, x.Block), StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.First())
+                .ToList();
+            if (candidates.Count == 0) return null;
+
+            foreach (var candidate in candidates)
+            {
+                int count = 1;
+                try
+                {
+                    count += Query.CountConfirmedRepeatedComponentStreak(
+                        boardName,
+                        queryResult.Time,
+                        candidate.ComponentName,
+                        candidate.Block,
+                        threshold - 1);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warn(
+                        ex,
+                        "Failed to check confirmed repeated component streak for {0} {1}@{2}.",
+                        boardName,
+                        candidate.ComponentName,
+                        candidate.Block);
+                    continue;
+                }
+
+                if (count >= threshold)
+                {
+                    return new RepeatedComponentLockTrigger
+                    {
+                        BoardName = boardName,
+                        ComponentName = candidate.ComponentName,
+                        Block = candidate.Block,
+                        Count = count
+                    };
+                }
+            }
+
+            return null;
+        }
+
+        private static string BuildRepeatedComponentKey(string componentName, int block)
+        {
+            return $"{(componentName ?? string.Empty).Trim()}|{block}";
         }
 
 
@@ -1333,10 +1415,10 @@ namespace AI_AOI.Views {
             {
                 if (e.Key == Key.Escape)
                 {
-                    MainScreenHost.Content = OperationScreen;
-                    IsConfirmingIssue = true;
                     if (CurrentDisplayInfor != null && CurrentDisplayInfor.ComponentInfors.Count > 0)
                     {
+                        MainScreenHost.Content = OperationScreen;
+                        IsConfirmingIssue = true;
                         CurrentComponentLocation = Math.Max(0, Math.Min(CurrentComponentLocation, CurrentDisplayInfor.ComponentInfors.Count - 1));
                         LoadComponentLocation(CurrentComponentLocation);
                         RefreshConfirmProgress();
@@ -1787,6 +1869,20 @@ namespace AI_AOI.Views {
         public string DefectType { get; set; }
         public string DisplayType { get; set; }
         public string Shortcut { get; set; }
+    }
+
+    public class RepeatedComponentKey
+    {
+        public string ComponentName { get; set; }
+        public int Block { get; set; }
+    }
+
+    public class RepeatedComponentLockTrigger
+    {
+        public string BoardName { get; set; }
+        public string ComponentName { get; set; }
+        public int Block { get; set; }
+        public int Count { get; set; }
     }
 
     public class AlarmTypeOption

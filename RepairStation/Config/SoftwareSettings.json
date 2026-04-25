@@ -1,9 +1,11 @@
 {
   "HOLLY_AOI_REPAIR_AIConnectionString": "Data Source=VISION;Initial Catalog=HOLLY-AOI-REPAIR-AI;Integrated Security=True;Encrypt=True;TrustServerCertificate=True",
   "HOLLY_AOI_REPAIRConnectionString": "Data Source=VISION;Initial Catalog=HOLLY-AOI-REPAIR;Integrated Security=True;Encrypt=True;TrustServerCertificate=True",
-  "ImageScale": 1,
-  "RectangleThickness": 5,
+  "ImageScale": 1.0,
+  "RectangleThickness": 1,
   "FontSize": 20.0,
-  "HistoryDataRootPath": "E:\\HLAOI_HISTORYDATA",
-  "ImageDataRootPath": "E:\\HLAOI_IMAGEDATA"
+  "HistoryDataRootPath": "D:\\HLAOI_HISTORYDATA",
+  "ImageDataRootPath": "D:\\HLAOI_IMAGEDATA",
+  "RepeatedComponentLockCount": 8,
+  "RepeatedComponentUnlockPassword": "Cnsbg2503cpe."
 }

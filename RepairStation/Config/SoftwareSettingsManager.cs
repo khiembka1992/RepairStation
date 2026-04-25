@@ -14,6 +14,8 @@ namespace AI_AOI.Config
         public double FontSize { get; set; }
         public string HistoryDataRootPath { get; set; }
         public string ImageDataRootPath { get; set; }
+        public int RepeatedComponentLockCount { get; set; }
+        public string RepeatedComponentUnlockPassword { get; set; }
 
         public SoftwareSettingsData Clone()
         {
@@ -102,7 +104,9 @@ namespace AI_AOI.Config
                 RectangleThickness = 5,
                 FontSize = 100,
                 HistoryDataRootPath = @"E:\HLAOI_HISTORYDATA",
-                ImageDataRootPath = @"E:\HLAOI_IMAGEDATA"
+                ImageDataRootPath = @"E:\HLAOI_IMAGEDATA",
+                RepeatedComponentLockCount = 8,
+                RepeatedComponentUnlockPassword = "Cnsbg2503cpe."
             };
         }
 
@@ -123,6 +127,10 @@ namespace AI_AOI.Config
                 data.HistoryDataRootPath = @"E:\HLAOI_HISTORYDATA";
             if (string.IsNullOrWhiteSpace(data.ImageDataRootPath))
                 data.ImageDataRootPath = @"E:\HLAOI_IMAGEDATA";
+            if (data.RepeatedComponentLockCount <= 0)
+                data.RepeatedComponentLockCount = 8;
+            if (string.IsNullOrWhiteSpace(data.RepeatedComponentUnlockPassword))
+                data.RepeatedComponentUnlockPassword = "Cnsbg2503cpe.";
         }
 
         private static void SaveInternal(SoftwareSettingsData data)
