@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
 using System.Timers;
 using System.Windows;
@@ -424,6 +425,7 @@ namespace AI_AOI.Views {
                 Line = queryResult.Line,
                 TotalComponentCount = rowMeta?.TotalComponentCount ?? 0,
                 BlockCount = rowMeta?.BlockCount ?? 0,
+                BlockNumbers = queryResult.BlockNumbers?.Distinct().OrderBy(x => x).ToList() ?? new List<int>(),
                 NgAoiComponentCount = rowMeta?.AlarmComponentCount ?? (queryResult.DefectLocations?.Count ?? 0)
             };
 
@@ -443,6 +445,8 @@ namespace AI_AOI.Views {
                     BlockID = defect.Block,
                     X = x,
                     Y = y,
+                    ComponentX = defect.X,
+                    ComponentY = defect.Y,
                     Width = w,
                     Height = h,
                     Angle = defect.Angle,
@@ -1814,6 +1818,7 @@ namespace AI_AOI.Views {
             error = null;
             try
             {
+                SaveCurrentInspectionTextLogs();
                 SaveCurrentInspectionImageLogs();
                 return true;
             }
@@ -1880,6 +1885,190 @@ namespace AI_AOI.Views {
                     }
                 }
             }
+        }
+
+        private void SaveCurrentInspectionTextLogs()
+        {
+            if (CurrentDisplayInfor == null) return;
+
+            SaveOffsetTextLog(
+                SoftwareSettingsManager.Current.OffsetRootPath,
+                (CurrentDisplayInfor.ComponentInfors ?? new List<ComponentInfor>()).Select((component, index) => Tuple.Create(index, component)),
+                useConfirmedAlarmType: false);
+
+            SaveOffsetTextLog(
+                SoftwareSettingsManager.Current.OffsetNgRootPath,
+                GetConfirmedComponents(isOk: false),
+                useConfirmedAlarmType: true);
+
+            SaveOffsetTextLog(
+                SoftwareSettingsManager.Current.OffsetOkRootPath,
+                GetConfirmedComponents(isOk: true),
+                useConfirmedAlarmType: false);
+
+            SaveShopfloorExportLogs();
+        }
+
+        private void SaveOffsetTextLog(string rootPath, IEnumerable<Tuple<int, ComponentInfor>> components, bool useConfirmedAlarmType)
+        {
+            if (string.IsNullOrWhiteSpace(rootPath)) return;
+
+            var rows = components?.Where(x => x?.Item2 != null).ToList() ?? new List<Tuple<int, ComponentInfor>>();
+            if (rows.Count == 0) return;
+
+            DateTime inspectTime = CurrentDisplayInfor.InspectTime;
+            string timestamp = inspectTime.ToString("yyyyMMddHHmmss");
+            string boardName = CurrentDisplayInfor.Model ?? string.Empty;
+            string line = CurrentDisplayInfor.Line ?? string.Empty;
+            string panelSn = CurrentDisplayInfor.SN ?? CurrentDisplayInfor.InspectionID.ToString();
+            string rail = CurrentDisplayInfor.RailID.ToString();
+
+            var lines = new List<string>
+            {
+                boardName,
+                line,
+                "LOCATION_SEQ\tX\tY\tTheta\tResult\tType\tBarcode\tTime\tRail"
+            };
+
+            foreach (var row in rows)
+            {
+                int index = row.Item1;
+                var component = row.Item2;
+                string alarmType = useConfirmedAlarmType
+                    ? GetConfirmedDefectType(index)
+                    : GetComponentAlarmType(component);
+
+                lines.Add(string.Join("\t", new[]
+                {
+                    $"{component.Name}_{component.BlockID}",
+                    FormatLogNumber(component.ComponentX),
+                    FormatLogNumber(component.ComponentY),
+                    "0",
+                    alarmType,
+                    component.Catalog ?? string.Empty,
+                    panelSn,
+                    timestamp,
+                    rail
+                }));
+            }
+
+            string folder = Path.Combine(rootPath, SanitizePathPart(boardName, "Board"));
+            string filePath = Path.Combine(folder, $"{SanitizePathPart(panelSn, CurrentDisplayInfor.InspectionID.ToString())}_{timestamp}.ttt");
+            WriteAllLinesCreatingDirectory(filePath, lines);
+        }
+
+        private void SaveShopfloorExportLogs()
+        {
+            string rootPath = SoftwareSettingsManager.Current.ShopfloorExportRootPath;
+            if (string.IsNullOrWhiteSpace(rootPath)) return;
+
+            var components = CurrentDisplayInfor.ComponentInfors
+                .Select((component, index) => Tuple.Create(index, component))
+                .Where(x => x.Item2 != null)
+                .ToList();
+
+            DateTime inspectTime = CurrentDisplayInfor.InspectTime;
+            string compactDate = inspectTime.ToString("yyyyMMdd");
+            string timestamp = inspectTime.ToString("yyyyMMddHHmmss");
+            string boardName = CurrentDisplayInfor.Model ?? string.Empty;
+            string line = CurrentDisplayInfor.Line ?? string.Empty;
+            string panelSn = CurrentDisplayInfor.SN ?? CurrentDisplayInfor.InspectionID.ToString();
+            int totalComponentCount = CurrentDisplayInfor.TotalComponentCount > 0
+                ? CurrentDisplayInfor.TotalComponentCount
+                : CurrentDisplayInfor.ComponentInfors.Count;
+
+            var componentsByBlock = components
+                .GroupBy(x => x.Item2.BlockID)
+                .ToDictionary(g => g.Key, g => g.ToList());
+            var blockNumbers = GetShopfloorBlockNumbers(componentsByBlock.Keys);
+
+            foreach (var blockNumber in blockNumbers)
+            {
+                var blockRows = componentsByBlock.TryGetValue(blockNumber, out var rows)
+                    ? rows
+                    : new List<Tuple<int, ComponentInfor>>();
+                var failedRows = blockRows
+                    .Where(x => !IsConfirmedOk(x.Item1, GetConfirmedDefectType(x.Item1)))
+                    .ToList();
+
+                var lines = new List<string>
+                {
+                    $"{boardName};{line};{panelSn};{timestamp};{totalComponentCount};"
+                };
+
+                if (failedRows.Count == 0)
+                {
+                    lines.Add("PASS;");
+                }
+                else
+                {
+                    lines.Add($"FAIL;{failedRows.Count};");
+                    lines.Add(string.Concat(failedRows.Select(x =>
+                    {
+                        var component = x.Item2;
+                        return $"{component.Name}_{component.BlockID},{component.Catalog ?? string.Empty},{GetConfirmedDefectType(x.Item1)};";
+                    })));
+                }
+
+                string folder = Path.Combine(
+                    rootPath,
+                    SanitizePathPart(boardName, "Board"),
+                    compactDate);
+                string fileName = $"{SanitizePathPart(line, "Line")}_{timestamp}_{SanitizePathPart(blockNumber.ToString(), "0")}.txt";
+                WriteAllLinesCreatingDirectory(Path.Combine(folder, fileName), lines);
+            }
+        }
+
+        private List<int> GetShopfloorBlockNumbers(IEnumerable<int> componentBlockNumbers)
+        {
+            var blocks = (CurrentDisplayInfor?.BlockNumbers ?? new List<int>())
+                .Concat(componentBlockNumbers ?? Enumerable.Empty<int>())
+                .Where(x => x != 0)
+                .Distinct()
+                .OrderBy(x => x)
+                .ToList();
+
+            if (blocks.Count == 0 && CurrentDisplayInfor?.BlockCount > 0)
+            {
+                blocks = Enumerable.Range(1, CurrentDisplayInfor.BlockCount).ToList();
+            }
+
+            return blocks;
+        }
+
+        private IEnumerable<Tuple<int, ComponentInfor>> GetConfirmedComponents(bool isOk)
+        {
+            return (CurrentDisplayInfor?.ComponentInfors ?? new List<ComponentInfor>())
+                .Select((component, index) => Tuple.Create(index, component))
+                .Where(x => x.Item2 != null && IsConfirmedOk(x.Item1, GetConfirmedDefectType(x.Item1)) == isOk);
+        }
+
+        private static void WriteAllLinesCreatingDirectory(string filePath, IEnumerable<string> lines)
+        {
+            if (string.IsNullOrWhiteSpace(filePath)) return;
+
+            string folder = Path.GetDirectoryName(filePath);
+            if (!string.IsNullOrWhiteSpace(folder) && !Directory.Exists(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
+
+            File.WriteAllLines(filePath, lines ?? Enumerable.Empty<string>(), Encoding.UTF8);
+        }
+
+        private static string FormatLogNumber(double value)
+        {
+            return value.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        private static string GetComponentAlarmType(ComponentInfor component)
+        {
+            if (component?.AlarmTypes == null || component.AlarmTypes.Count == 0) return string.Empty;
+
+            return string.Join(",", component.AlarmTypes
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => x.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase));
         }
 
         private string GetConfirmedDefectType(int componentIndex)
@@ -1964,6 +2153,8 @@ namespace AI_AOI.Views {
         public int BlockID { get; set; }
         public double X { get; set; }
         public double Y { get; set; }
+        public double ComponentX { get; set; }
+        public double ComponentY { get; set; }
         public double Width { get; set; }
         public double Height { get; set; }
         public double Angle { get; set; }
@@ -1991,6 +2182,7 @@ namespace AI_AOI.Views {
         public string ProductLot { get; set; }
         public string Line { get; set; }
         public int BlockCount { get; set; }
+        public List<int> BlockNumbers { get; set; } = new List<int>();
         public int TotalComponentCount { get; set; }
         public int NgAoiComponentCount { get; set; }
         public Mat PanelImage { get; set; }

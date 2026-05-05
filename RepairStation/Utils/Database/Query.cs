@@ -142,6 +142,7 @@ WHERE i.ID = @InspectionID;";
                             Station = ReadString(reader, "Station"),
                             RailID = ReadInt(reader, "RailID"),
                             HasMark = ReadBool(reader, "HasMark"),
+                            BlockNumbers = new List<int>(),
                             DefectLocations = new List<DefectLocation>()
                         };
                     }
@@ -151,6 +152,7 @@ WHERE i.ID = @InspectionID;";
                         ret.SN = ret.ID.ToString();
                     }
 
+                    ret.BlockNumbers = GetInspectionBlockNumbers(conn, inspectionId);
                     ret.DefectLocations = GetDefectLocations(conn, inspectionId);
                     ret.Status = ret.DefectLocations.Count == 0;
 
@@ -162,6 +164,31 @@ WHERE i.ID = @InspectionID;";
                 Logger.Error(ex, "GetInspectionDetail failed.");
                 throw;
             }
+        }
+
+        private static List<int> GetInspectionBlockNumbers(SqlConnection conn, Guid inspectionId)
+        {
+            var blocks = new List<int>();
+
+            using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = @"
+SELECT b.Number
+FROM dbo.Block b
+WHERE b.InspectionID = @InspectionID
+ORDER BY b.Number;";
+                cmd.Parameters.Add("@InspectionID", SqlDbType.UniqueIdentifier).Value = inspectionId;
+
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        blocks.Add(ReadInt(reader, "Number"));
+                    }
+                }
+            }
+
+            return blocks.Distinct().ToList();
         }
 
         private static List<DefectLocation> GetDefectLocations(SqlConnection conn, Guid inspectionId)
@@ -400,6 +427,7 @@ ORDER BY i.InspectionDateTime DESC;";
         public string Station { get; set; }
         public string ProductLot { get; set; }
         public string Line { get; set; }
+        public List<int> BlockNumbers { get; set; } = new List<int>();
         public List<DefectLocation> DefectLocations { get; set; }
     }
 

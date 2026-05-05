@@ -14,6 +14,10 @@ namespace AI_AOI.Config
         public double FontSize { get; set; }
         public string HistoryDataRootPath { get; set; }
         public string ImageDataRootPath { get; set; }
+        public string OffsetRootPath { get; set; }
+        public string OffsetNgRootPath { get; set; }
+        public string OffsetOkRootPath { get; set; }
+        public string ShopfloorExportRootPath { get; set; }
         public int RepeatedComponentLockCount { get; set; }
         public string RepeatedComponentUnlockPassword { get; set; }
         public string AlarmTypesRedText { get; set; }
@@ -106,6 +110,10 @@ namespace AI_AOI.Config
                 FontSize = 100,
                 HistoryDataRootPath = @"E:\HLAOI_HISTORYDATA",
                 ImageDataRootPath = @"E:\HLAOI_IMAGEDATA",
+                OffsetRootPath = @"E:\HLAOI_OFFSET",
+                OffsetNgRootPath = @"E:\HLAOI_OFFSET_NG",
+                OffsetOkRootPath = @"E:\HLAOI_OFFSET_OK",
+                ShopfloorExportRootPath = @"E:\HLAOI_SHOPFLOOR_EXPORTS_FOXCONN_VN",
                 RepeatedComponentLockCount = 8,
                 RepeatedComponentUnlockPassword = "1",
                 AlarmTypesRedText = "Missing,Wrong Part,Polarity,Tombstone,Bridge"
@@ -129,6 +137,14 @@ namespace AI_AOI.Config
                 data.HistoryDataRootPath = @"E:\HLAOI_HISTORYDATA";
             if (string.IsNullOrWhiteSpace(data.ImageDataRootPath))
                 data.ImageDataRootPath = @"E:\HLAOI_IMAGEDATA";
+            if (string.IsNullOrWhiteSpace(data.OffsetRootPath))
+                data.OffsetRootPath = @"E:\HLAOI_OFFSET";
+            if (string.IsNullOrWhiteSpace(data.OffsetNgRootPath))
+                data.OffsetNgRootPath = @"E:\HLAOI_OFFSET_NG";
+            if (string.IsNullOrWhiteSpace(data.OffsetOkRootPath))
+                data.OffsetOkRootPath = @"E:\HLAOI_OFFSET_OK";
+            if (string.IsNullOrWhiteSpace(data.ShopfloorExportRootPath))
+                data.ShopfloorExportRootPath = @"E:\HLAOI_SHOPFLOOR_EXPORTS_FOXCONN_VN";
             if (data.RepeatedComponentLockCount <= 0)
                 data.RepeatedComponentLockCount = 8;
             if (string.IsNullOrWhiteSpace(data.RepeatedComponentUnlockPassword))
