@@ -16,6 +16,7 @@ namespace AI_AOI.Config
         public string ImageDataRootPath { get; set; }
         public int RepeatedComponentLockCount { get; set; }
         public string RepeatedComponentUnlockPassword { get; set; }
+        public string AlarmTypesRedText { get; set; }
 
         public SoftwareSettingsData Clone()
         {
@@ -106,7 +107,8 @@ namespace AI_AOI.Config
                 HistoryDataRootPath = @"E:\HLAOI_HISTORYDATA",
                 ImageDataRootPath = @"E:\HLAOI_IMAGEDATA",
                 RepeatedComponentLockCount = 8,
-                RepeatedComponentUnlockPassword = "Cnsbg2503cpe."
+                RepeatedComponentUnlockPassword = "1",
+                AlarmTypesRedText = "Missing,Wrong Part,Polarity,Tombstone,Bridge"
             };
         }
 
@@ -130,7 +132,9 @@ namespace AI_AOI.Config
             if (data.RepeatedComponentLockCount <= 0)
                 data.RepeatedComponentLockCount = 8;
             if (string.IsNullOrWhiteSpace(data.RepeatedComponentUnlockPassword))
-                data.RepeatedComponentUnlockPassword = "Cnsbg2503cpe.";
+                data.RepeatedComponentUnlockPassword = "1";
+            if (string.IsNullOrWhiteSpace(data.AlarmTypesRedText))
+                data.AlarmTypesRedText = "Missing,Wrong Part,Polarity,Tombstone,Bridge";
         }
 
         private static void SaveInternal(SoftwareSettingsData data)

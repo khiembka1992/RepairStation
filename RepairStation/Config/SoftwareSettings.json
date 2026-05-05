@@ -7,5 +7,6 @@
   "HistoryDataRootPath": "D:\\HLAOI_HISTORYDATA",
   "ImageDataRootPath": "D:\\HLAOI_IMAGEDATA",
   "RepeatedComponentLockCount": 8,
-  "RepeatedComponentUnlockPassword": "Cnsbg2503cpe."
+  "RepeatedComponentUnlockPassword": "Cnsbg2503cpe.",
+  "AlarmTypesRedText": "Missing,Wrong Part,Polarity,Tombstone,Bridge"
 }

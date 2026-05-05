@@ -22,6 +22,7 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="190"/>
@@ -51,6 +52,9 @@
 
                 <TextBlock Grid.Row="7" Grid.Column="0" VerticalAlignment="Center" Text="Repeated Lock Count"/>
                 <TextBox Grid.Row="7" Grid.Column="1" Width="120" HorizontalAlignment="Left" Text="{Binding RepeatedComponentLockCount}" Style="{StaticResource AppFilterTextBoxStyle}"/>
+
+                <TextBlock Grid.Row="8" Grid.Column="0" VerticalAlignment="Center" Text="Alarm Types Red (CSV)"/>
+                <TextBox Grid.Row="8" Grid.Column="1" Margin="0,0,12,0" Text="{Binding AlarmTypesRedText}" Style="{StaticResource AppFilterTextBoxStyle}" ToolTip="Example:Missing,No Solder,Bridge"/>
             </Grid>
         </Border>
     </Grid>

@@ -49,6 +49,7 @@ namespace AI_AOI.Views {
         const int AlarmTypeButtonsPerPage = 9;
         static readonly string[] NumpadShortcutOrder = { "7", "8", "9", "4", "5", "6", "1", "2", "3" };
         bool IsTopComponentImageMode = false;
+        HashSet<string> CurrentComponentAlarmTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         bool IsConfirmingIssue = false;
         bool IsStatisticsSelectionHandlingEnabled = true;
         bool WasStatisticsEmpty = true;
@@ -128,6 +129,11 @@ namespace AI_AOI.Views {
             RefreshPanelOverlayColors(ComponentLocation);
 
             var CurrentComponentInfor = CurrentDisplayInfor.ComponentInfors[ComponentLocation];
+            CurrentComponentAlarmTypes = new HashSet<string>(
+                (CurrentComponentInfor.AlarmTypes ?? new List<string>())
+                    .Select(x => (x ?? string.Empty).Trim())
+                    .Where(x => !string.IsNullOrWhiteSpace(x)),
+                StringComparer.OrdinalIgnoreCase);
             var catalogText = string.IsNullOrWhiteSpace(CurrentComponentInfor.Catalog)
                 ? "Catalog"
                 : CurrentComponentInfor.Catalog;
@@ -1074,7 +1080,20 @@ namespace AI_AOI.Views {
             if (hasIssue == true)
             {
                 button.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(70, 70, 70));
-                button.Foreground = Brushes.White;
+                if (string.Equals(shortcut, "-", StringComparison.Ordinal))
+                {
+                    // The quick '-' button should always keep default text color.
+                    button.Foreground = Brushes.White;
+                }
+                else if (IsCurrentComponentAlarmType(defectType))
+                {
+                    button.Foreground = ShouldUseRedAlarmText(defectType) ? Brushes.Red : Brushes.Yellow;
+                }
+                else
+                {
+                    // Keep non-current alarm buttons in default color (no red/yellow highlight)
+                    button.Foreground = Brushes.White;
+                }
             }
             else if (hasIssue == false)
             {
@@ -1091,6 +1110,29 @@ namespace AI_AOI.Views {
             Grid.SetRow(button, row);
             Grid.SetColumn(button, col);
             gButtons.Children.Add(button);
+        }
+
+        private bool ShouldUseRedAlarmText(string defectType)
+        {
+            var type = (defectType ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(type)) return false;
+
+            var redListCsv = SoftwareSettingsManager.Current?.AlarmTypesRedText ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(redListCsv)) return false;
+
+            var redList = redListCsv
+                .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => (x ?? string.Empty).Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x));
+
+            return redList.Any(x => string.Equals(x, type, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private bool IsCurrentComponentAlarmType(string defectType)
+        {
+            var type = (defectType ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(type)) return false;
+            return CurrentComponentAlarmTypes != null && CurrentComponentAlarmTypes.Contains(type);
         }
 
         private object BuildConfirmButtonContent(string caption, string shortcut)
