@@ -1540,13 +1540,27 @@ namespace AI_AOI.Views {
             double size)
         {
             if (source == null) return null;
-            if (Math.Abs(scale - 1.0) < 0.0001) return source;
 
-            if (source is BitmapSource bitmapSource && source.Width < size && source.Height < size)
+            if (source is BitmapSource bitmapSource)
             {
                 try
                 {
-                    var transformed = new TransformedBitmap(bitmapSource, new System.Windows.Media.ScaleTransform(scale, scale));
+                    double targetScale = scale;
+                    if (size > 0)
+                    {
+                        double scaledWidth = source.Width * targetScale;
+                        double scaledHeight = source.Height * targetScale;
+                        double maxScaledSide = Math.Max(scaledWidth, scaledHeight);
+                        if (maxScaledSide > size)
+                        {
+                            double maxSourceSide = Math.Max(source.Width, source.Height);
+                            targetScale = maxSourceSide <= 0 ? targetScale : size / maxSourceSide;
+                        }
+                    }
+
+                    if (Math.Abs(targetScale - 1.0) < 0.0001) return source;
+
+                    var transformed = new TransformedBitmap(bitmapSource, new System.Windows.Media.ScaleTransform(targetScale, targetScale));
                     transformed.Freeze();
                     return transformed;
                 }
