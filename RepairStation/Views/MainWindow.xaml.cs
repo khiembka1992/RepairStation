@@ -1892,11 +1892,6 @@ namespace AI_AOI.Views {
             if (CurrentDisplayInfor == null) return;
 
             SaveOffsetTextLog(
-                SoftwareSettingsManager.Current.OffsetRootPath,
-                (CurrentDisplayInfor.ComponentInfors ?? new List<ComponentInfor>()).Select((component, index) => Tuple.Create(index, component)),
-                useConfirmedAlarmType: false);
-
-            SaveOffsetTextLog(
                 SoftwareSettingsManager.Current.OffsetNgRootPath,
                 GetConfirmedComponents(isOk: false),
                 useConfirmedAlarmType: true);
