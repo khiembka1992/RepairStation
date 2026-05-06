@@ -73,6 +73,8 @@ namespace AI_AOI.Views {
             PanelImageView.ShowBulkConfirmMenu = true;
             PanelImageView.BulkAllOkRequested += PanelImageView_BulkAllOkRequested;
             PanelImageView.BulkAllNgRequested += PanelImageView_BulkAllNgRequested;
+            PanelImageView.Clicked += PanelImageView_Clicked;
+            ResultPreviewImage.Clicked += ResultPreviewImage_Clicked;
             tbStatus.Text = "Result: WAITTING";
             ComponentReferenceImageView.MouseLeftButtonUp += ComponentPreviewImage_MouseLeftButtonUp;
             ComponentImageView.MouseLeftButtonUp += ComponentPreviewImage_MouseLeftButtonUp;
@@ -139,6 +141,7 @@ namespace AI_AOI.Views {
                 ? "Catalog"
                 : CurrentComponentInfor.Catalog;
             tbHeaderBoardInfo.Text = $"{CurrentComponentInfor.Name} @ {CurrentComponentInfor.BlockID} {catalogText}";
+            UpdateCurrentBoardNameText(CurrentDisplayInfor);
 
             // Default on each component is Side view.
             IsTopComponentImageMode = false;
@@ -156,6 +159,71 @@ namespace AI_AOI.Views {
             IsTopComponentImageMode = !IsTopComponentImageMode;
             RenderComponentPreviewImages(CurrentDisplayInfor.ComponentInfors[CurrentComponentLocation]);
             e.Handled = true;
+        }
+
+        private void PanelImageView_Clicked(object sender, ClickEventArgs e)
+        {
+            JumpToComponentAtPanelPoint(e?.ClickPoint, returnToOperationView: false);
+        }
+
+        private void ResultPreviewImage_Clicked(object sender, ClickEventArgs e)
+        {
+            JumpToComponentAtPanelPoint(e?.ClickPoint, returnToOperationView: true);
+        }
+
+        private void JumpToComponentAtPanelPoint(System.Windows.Point? clickPoint, bool returnToOperationView)
+        {
+            if (!clickPoint.HasValue) return;
+            if (CurrentDisplayInfor?.ComponentInfors == null || CurrentDisplayInfor.ComponentInfors.Count == 0) return;
+
+            int componentIndex = FindComponentIndexAtPanelPoint(clickPoint.Value);
+            if (componentIndex < 0) return;
+
+            if (returnToOperationView)
+            {
+                MainScreenHost.Content = OperationScreen;
+                IsConfirmingIssue = true;
+            }
+
+            if (!IsConfirmingIssue) return;
+
+            CurrentComponentLocation = componentIndex;
+            LoadComponentLocation(CurrentComponentLocation);
+            RefreshConfirmProgress();
+        }
+
+        private int FindComponentIndexAtPanelPoint(System.Windows.Point point)
+        {
+            var rectangles = CurrentDisplayInfor?.MyDrawedRectangle;
+            if (rectangles == null || rectangles.Count == 0) return -1;
+
+            int count = Math.Min(rectangles.Count, CurrentDisplayInfor.ComponentInfors?.Count ?? 0);
+            for (int i = count - 1; i >= 0; i--)
+            {
+                if (IsPointInsideDrawedRectangle(point, rectangles[i]))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private static bool IsPointInsideDrawedRectangle(System.Windows.Point point, MyDrawedRectangle rectangle)
+        {
+            if (rectangle == null) return false;
+            if (rectangle.OriginWidth <= 0 || rectangle.OriginHeight <= 0) return false;
+
+            double dx = point.X - rectangle.OriginX;
+            double dy = point.Y - rectangle.OriginY;
+            double radians = rectangle.OriginAngle * Math.PI / 180.0;
+            double cos = Math.Cos(radians);
+            double sin = Math.Sin(radians);
+            double localX = dx * cos - dy * sin;
+            double localY = dx * sin + dy * cos;
+
+            return Math.Abs(localX) <= rectangle.OriginWidth / 2.0 &&
+                   Math.Abs(localY) <= rectangle.OriginHeight / 2.0;
         }
 
         private void RenderComponentPreviewImages(ComponentInfor componentInfor)
@@ -270,6 +338,7 @@ namespace AI_AOI.Views {
             LastSelectedDefectType = "-";
             LastSelectedDisplayType = "-";
             tbStatus.Text = "Selected: -";
+            UpdateCurrentBoardNameText(null);
             if (gButtons != null)
             {
                 gButtons.Children.Clear();
@@ -765,11 +834,22 @@ namespace AI_AOI.Views {
             {
                 tbHeaderBoardInfo.Text = "Catalog";
                 tbAlarmedStats.Text = "Alarmed Component Statistics 0 / 0 / 0 / 0";
+                UpdateCurrentBoardNameText(null);
                 return;
             }
 
             tbHeaderBoardInfo.Text = "Catalog";
+            UpdateCurrentBoardNameText(displayInfor);
             UpdateAlarmedStatistics();
+        }
+
+        private void UpdateCurrentBoardNameText(DisplayInfor displayInfor)
+        {
+            if (tbCurrentBoardName == null) return;
+
+            tbCurrentBoardName.Text = displayInfor == null
+                ? string.Empty
+                : displayInfor.Model ?? string.Empty;
         }
 
         private void UpdateAlarmedStatistics()
@@ -1367,7 +1447,9 @@ namespace AI_AOI.Views {
             {
                 PanelImageView.BulkAllOkRequested -= PanelImageView_BulkAllOkRequested;
                 PanelImageView.BulkAllNgRequested -= PanelImageView_BulkAllNgRequested;
+                PanelImageView.Clicked -= PanelImageView_Clicked;
             }
+            ResultPreviewImage.Clicked -= ResultPreviewImage_Clicked;
             SoftwareSettingsManager.Save();
         }
 

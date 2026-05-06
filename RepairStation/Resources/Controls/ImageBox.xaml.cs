@@ -847,6 +847,10 @@ namespace Andrew.Controls
                     e.Handled = true;
                 }
             }
+            else if (e.ChangedButton == MouseButton.Left)
+            {
+                MouseClicked(this, new ClickEventArgs(GetMousePoint()));
+            }
         }
 
 

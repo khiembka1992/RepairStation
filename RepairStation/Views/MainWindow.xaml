@@ -65,14 +65,19 @@
             </MenuItem>
         </Menu>
 
-        <StackPanel Grid.Row="1" Orientation="Horizontal">
+
+        <DockPanel Grid.Row="1">
             <Button Content="Statistics"
-                    Style="{StaticResource AppToolbarButtonStyle}"
-                    Click="menuStatisticsView_Click"/>
+                        Style="{StaticResource AppToolbarButtonStyle}"
+                        Click="menuStatisticsView_Click"/>
             <Button Content="Operation"
-                    Style="{StaticResource AppToolbarButtonStyle}"
-                    Click="menuOperationView_Click" Visibility="Collapsed"/>
-        </StackPanel>
+                        Style="{StaticResource AppToolbarButtonStyle}"
+                        Click="menuOperationView_Click" Visibility="Collapsed"/>
+            <TextBlock x:Name="tbCurrentBoardName"
+                       Text="Board name"
+                       HorizontalAlignment="Right"
+                       Foreground="{StaticResource AppTextPrimaryBrush}"/>
+        </DockPanel>
 
         <ContentControl x:Name="MainScreenHost" Grid.Row="2"/>
         <StackPanel Orientation="Horizontal" Grid.Row="3">
