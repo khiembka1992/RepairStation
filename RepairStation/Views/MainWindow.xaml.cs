@@ -251,8 +251,10 @@ namespace AI_AOI.Views {
                 2.0,
                 256);
             ComponentReferenceImageView.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
-            ComponentReferenceImageView.RenderTransform = new System.Windows.Media.RotateTransform(componentInfor.Angle);
+            ComponentReferenceImageView.RenderTransform = new System.Windows.Media.RotateTransform(componentInfor.Angle + 180);
             ComponentImageView.Source = CreateImageSourceFromBytes(componentBytes);
+            ComponentImageView.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
+            ComponentImageView.RenderTransform = new System.Windows.Media.RotateTransform(180);
             AlarmComponentImageView.Source = CreateImageSourceFromBytes(alarmBytes);
         }
 
