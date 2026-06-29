@@ -20,6 +20,7 @@ namespace AI_AOI.Config
         public int RepeatedComponentLockCount { get; set; }
         public string RepeatedComponentUnlockPassword { get; set; }
         public string AlarmTypesRedText { get; set; }
+        public string ConfirmOkShortcut { get; set; }
 
         public SoftwareSettingsData Clone()
         {
@@ -31,6 +32,7 @@ namespace AI_AOI.Config
     {
         private static readonly Logger Logger = LogManager.GetLogger("debug");
         private static readonly object Sync = new object();
+        public static readonly string[] ConfirmOkShortcutOptions = { "+", "Space", "Left Shift", "Right Shift", "Down" };
         private static SoftwareSettingsData _current;
 
         public static string ConfigPath =>
@@ -114,7 +116,8 @@ namespace AI_AOI.Config
                 ShopfloorExportRootPath = @"E:\HLAOI_SHOPFLOOR_EXPORTS_FOXCONN_VN",
                 RepeatedComponentLockCount = 8,
                 RepeatedComponentUnlockPassword = "1",
-                AlarmTypesRedText = "Missing,Wrong Part,Polarity,Tombstone,Bridge"
+                AlarmTypesRedText = "Missing,Wrong Part,Polarity,Tombstone,Bridge",
+                ConfirmOkShortcut = "+"
             };
         }
 
@@ -147,6 +150,23 @@ namespace AI_AOI.Config
                 data.RepeatedComponentUnlockPassword = "1";
             if (string.IsNullOrWhiteSpace(data.AlarmTypesRedText))
                 data.AlarmTypesRedText = "Missing,Wrong Part,Polarity,Tombstone,Bridge";
+            if (!IsValidConfirmOkShortcut(data.ConfirmOkShortcut))
+                data.ConfirmOkShortcut = "+";
+        }
+
+        public static bool IsValidConfirmOkShortcut(string shortcut)
+        {
+            if (string.IsNullOrWhiteSpace(shortcut)) return false;
+
+            foreach (var option in ConfirmOkShortcutOptions)
+            {
+                if (string.Equals(option, shortcut.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static void SaveInternal(SoftwareSettingsData data)

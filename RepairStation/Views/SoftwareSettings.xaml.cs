@@ -13,6 +13,7 @@ namespace AI_AOI.Views
         {
             InitializeComponent();
             SoftwareSettingsManager.EnsureLoaded();
+            ConfirmOkShortcutCombo.ItemsSource = SoftwareSettingsManager.ConfirmOkShortcutOptions;
             DataContext = SoftwareSettingsManager.Current;
             Closed += SoftwareSettings_Closed;
         }

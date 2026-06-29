@@ -910,7 +910,7 @@ namespace AI_AOI.Views {
             }
 
             int buttonIndex = 0;
-            AddConfirmButton("OK", "OK", buttonIndex++, false, "+");
+            AddConfirmButton("OK", "OK", buttonIndex++, false, GetConfirmOkShortcutDisplayText());
 
             // Add quick button for current component alarm type from Alarm table, right after OK.
             var currentComponentAlarmType = (componentInfor?.AlarmTypes ?? new List<string>())
@@ -1467,8 +1467,18 @@ namespace AI_AOI.Views {
 
         private void menuSoftware_Click(object sender, RoutedEventArgs e) {
             var window = new SoftwareSettings();
+            window.Closed += SoftwareSettingsWindow_Closed;
             window.Show();
 
+        }
+
+        private void SoftwareSettingsWindow_Closed(object sender, EventArgs e)
+        {
+            if (MainScreenHost.Content != OperationScreen) return;
+            if (CurrentDisplayInfor == null || CurrentDisplayInfor.ComponentInfors.Count <= 0) return;
+            if (CurrentComponentLocation < 0 || CurrentComponentLocation >= CurrentDisplayInfor.ComponentInfors.Count) return;
+
+            UpdateAlarmTypeButtons(CurrentDisplayInfor.ComponentInfors[CurrentComponentLocation], keepCurrentPage: true);
         }
 
         private void menuOperationView_Click(object sender, RoutedEventArgs e)
@@ -1495,7 +1505,7 @@ namespace AI_AOI.Views {
                 "Operation View\n" +
                 "Left / A: Previous component\n" +
                 "Right / D: Next component\n" +
-                "+ : Confirm OK\n" +
+                $"{GetConfirmOkShortcutDisplayText()} : Confirm OK\n" +
                 "1..9 : Confirm alarm type button 1..9\n\n" +
                 "Result View\n" +
                 "Enter: Commit and open next inspection\n" +
@@ -1606,7 +1616,7 @@ namespace AI_AOI.Views {
             if (MainScreenHost.Content != OperationScreen) return;
             if (CurrentDisplayInfor == null || CurrentDisplayInfor.ComponentInfors.Count <= 0) return;
 
-            if (e.Key == Key.Add || (e.Key == Key.OemPlus && (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift))
+            if (IsConfirmOkShortcutKey(e.Key))
             {
                 if (IsConfirmingIssue)
                 {
@@ -1644,6 +1654,37 @@ namespace AI_AOI.Views {
             {
                 NavigateComponent(1);
                 e.Handled = true;
+            }
+        }
+
+        private string GetConfirmOkShortcut()
+        {
+            var shortcut = SoftwareSettingsManager.Current?.ConfirmOkShortcut;
+            return SoftwareSettingsManager.IsValidConfirmOkShortcut(shortcut) ? shortcut.Trim() : "+";
+        }
+
+        private string GetConfirmOkShortcutDisplayText()
+        {
+            return GetConfirmOkShortcut();
+        }
+
+        private bool IsConfirmOkShortcutKey(Key key)
+        {
+            switch (GetConfirmOkShortcut())
+            {
+                case "+":
+                    return key == Key.Add ||
+                           (key == Key.OemPlus && (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift);
+                case "Space":
+                    return key == Key.Space;
+                case "Left Shift":
+                    return key == Key.LeftShift;
+                case "Right Shift":
+                    return key == Key.RightShift;
+                case "Down":
+                    return key == Key.Down;
+                default:
+                    return false;
             }
         }
 

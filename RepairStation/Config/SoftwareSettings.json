@@ -11,5 +11,6 @@
   "ShopfloorExportRootPath": "E:\\HLAOI_SHOPFLOOR_EXPORTS_FOXCONN_VN",
   "RepeatedComponentLockCount": 8,
   "RepeatedComponentUnlockPassword": "Cnsbg2503cpe.",
-  "AlarmTypesRedText": "Missing,Wrong Part,Polarity,Tombstone,Bridge"
+  "AlarmTypesRedText": "Missing,Wrong Part,Polarity,Tombstone,Bridge",
+  "ConfirmOkShortcut": "+"
 }
