@@ -78,6 +78,8 @@
     <ApplicationIcon>eye.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Devart.Data.Linq, Version=5.2.235.0, Culture=neutral, PublicKeyToken=09af7300eec23701, processorArchitecture=MSIL" />
+    <Reference Include="Devart.Data.SqlServer.Linq, Version=5.2.235.0, Culture=neutral, PublicKeyToken=09af7300eec23701, processorArchitecture=MSIL" />
     <Reference Include="Emgu.CV.Bitmap, Version=4.4.0.4099, Culture=neutral, PublicKeyToken=7281126722ab4438, processorArchitecture=MSIL">
       <HintPath>..\packages\Emgu.CV.Bitmap.4.4.0.4099\lib\netstandard2.0\Emgu.CV.Bitmap.dll</HintPath>
     </Reference>
@@ -141,18 +143,22 @@
     <Compile Include="Resources\Controls\ImageBox.xaml.cs">
       <DependentUpon>ImageBox.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Utils\Database\RepairAIDatabase\RepairAIDataContext.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>RepairAIDataContext.lqml</DependentUpon>
+    </Compile>
+    <Compile Include="Utils\Database\RepairDatabase\RepairDataContext.designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>RepairDataContext.lqml</DependentUpon>
+    </Compile>
     <Compile Include="Views\SoftwareSettings.xaml.cs">
       <DependentUpon>SoftwareSettings.xaml</DependentUpon>
     </Compile>
     <Compile Include="Utils\Convertor.cs" />
     <Compile Include="Config\SoftwareSettingsManager.cs" />
     <Compile Include="Utils\Database\Query.cs" />
-    <Compile Include="Utils\Database\RepairAIDatabase\RepairAIDataContext.designer.cs" />
-    <Compile Include="Utils\Database\RepairDatabase\RepairDataContext1.designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>RepairDataContext.dbml</DependentUpon>
-    </Compile>
     <Compile Include="Utils\Database\SQL.cs" />
     <Compile Include="Utils\DateTime.cs" />
     <Compile Include="Utils\MyCV\MyCV.cs" />
@@ -243,6 +249,26 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+    <None Include="Utils\Database\RepairAIDatabase\RepairAIDataContext.Diagram1.view">
+      <DependentUpon>RepairAIDataContext.lqml</DependentUpon>
+    </None>
+    <None Include="Utils\Database\RepairAIDatabase\RepairAIDataContext.edps">
+      <DependentUpon>RepairAIDataContext.lqml</DependentUpon>
+    </None>
+    <None Include="Utils\Database\RepairAIDatabase\RepairAIDataContext.lqml">
+      <Generator>DevartLinqToSqlGenerator</Generator>
+      <LastGenOutput>RepairAIDataContext.Designer.cs</LastGenOutput>
+    </None>
+    <None Include="Utils\Database\RepairDatabase\RepairDataContext.Diagram1.view">
+      <DependentUpon>RepairDataContext.lqml</DependentUpon>
+    </None>
+    <None Include="Utils\Database\RepairDatabase\RepairDataContext.edps">
+      <DependentUpon>RepairDataContext.lqml</DependentUpon>
+    </None>
+    <None Include="Utils\Database\RepairDatabase\RepairDataContext.lqml">
+      <Generator>DevartLinqToSqlGenerator</Generator>
+      <LastGenOutput>RepairDataContext.Designer.cs</LastGenOutput>
+    </None>
     <Resource Include="eye.ico" />
     <Content Include="NLog.config">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -260,16 +286,6 @@
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
-    </None>
-    <None Include="Utils\Database\RepairAIDatabase\RepairAIDataContext.dbml" />
-    <None Include="Utils\Database\RepairAIDatabase\RepairAIDataContext.dbml.layout" />
-    <None Include="Utils\Database\RepairDatabase\RepairDataContext.dbml">
-      <Generator>MSLinqToSQLGenerator</Generator>
-      <LastGenOutput>RepairDataContext1.designer.cs</LastGenOutput>
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Utils\Database\RepairDatabase\RepairDataContext.dbml.layout">
-      <DependentUpon>RepairDataContext.dbml</DependentUpon>
     </None>
   </ItemGroup>
   <ItemGroup>

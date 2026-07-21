@@ -1517,9 +1517,11 @@ namespace AI_AOI.Views {
         {
             var assembly = Assembly.GetExecutingAssembly();
             var version = assembly.GetName().Version?.ToString() ?? "N/A";
+            var buildTime = File.GetLastWriteTime(assembly.Location).ToString("yyyy-MM-dd HH:mm:ss");
             UILib.ShowInformation(
                 "AI-AOI Repair Station\n" +
-                $"Version: {version}\n\n" +
+                $"Version: {version}\n" +
+                $"Build time: {buildTime}\n\n" +
                 "Used for AOI repair confirmation workflow.");
         }
 

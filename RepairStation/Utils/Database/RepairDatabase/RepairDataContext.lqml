@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Database Name="HOLLY-AOI-REPAIR" EntityNamespace="HOLLYAOIREPAIRContext" ContextNamespace="HOLLYAOIREPAIRContext" Class="HOLLYAOIREPAIRDataContext" xmlns:ed="http://devart.com/schemas/EntityDeveloper/1.0" ed:Guid="9e96670b-2598-41fb-ab56-d964d945e2aa" Provider="Devart.Data.SqlServer.Linq.Provider.SqlDataProvider, Devart.Data.SqlServer.Linq" Extended="true" xmlns="http://schemas.devart.com/linqconnect/mapping">
+  <Connection Mode="ConnectionString" ConnectionString="Data Source=VISION;Initial Catalog=HOLLY-AOI-REPAIR;Integrated Security=True;Persist Security Info=True" Provider="System.Data.SqlClient" />
+  <Table Name="dbo.Alarm" Member="Alarms">
+    <Type Name="Alarm" ed:Guid="57486321-d2e6-4082-9017-8ee158ecb996">
+      <Column Name="ID" Type="System.Guid" DbType="UNIQUEIDENTIFIER NOT NULL" IsPrimaryKey="true" CanBeNull="false" UpdateCheck="Always" ed:ValidateRequired="true" ed:Guid="06fb05be-cf25-44fb-ba27-a5ca71b0c63b" />
+      <Column Name="DefectType" Type="System.String" DbType="NVARCHAR(255) NOT NULL" CanBeNull="false" UpdateCheck="Never" MaxLength="255" Unicode="true" ed:ValidateMaxLength="255" ed:ValidateRequired="true" ed:Guid="94ae66b2-c925-4b6b-bdb2-f6054e1d0833" />
+      <Column Name="AlarmType" Type="System.String" DbType="NVARCHAR(255) NOT NULL" CanBeNull="false" UpdateCheck="Never" MaxLength="255" Unicode="true" ed:ValidateMaxLength="255" ed:ValidateRequired="true" ed:Guid="7186535c-ba1d-40a4-9207-b70bc1930733" />
+      <Column Name="TopImage" Type="System.Byte[]" DbType="VARBINARY(MAX)" CanBeNull="true" UpdateCheck="Never" ed:ValidateRequired="false" ed:Guid="41a39b85-c853-4f1e-8439-8df02f65968e" />
+      <Column Name="SideImage" Type="System.Byte[]" DbType="VARBINARY(MAX)" CanBeNull="true" UpdateCheck="Never" ed:ValidateRequired="false" ed:Guid="29afdbf5-4add-4dd0-b7fd-96e2db8deff7" />
+      <Column Name="ImageWidth" Type="System.Double" DbType="FLOAT NOT NULL" CanBeNull="false" UpdateCheck="Never" Precision="53" ed:ValidateRequired="true" ed:Guid="2d04c7d1-5b89-4b4f-8a8e-8d9cf51f44df" />
+      <Column Name="ImageHeight" Type="System.Double" DbType="FLOAT NOT NULL" CanBeNull="false" UpdateCheck="Never" Precision="53" ed:ValidateRequired="true" ed:Guid="673fb33c-38dd-45eb-a486-00be243ddd67" />
+      <Column Name="Width" Type="System.Double" DbType="FLOAT NOT NULL" CanBeNull="false" UpdateCheck="Never" Precision="53" ed:ValidateRequired="true" ed:Guid="bc72e613-572c-45d8-a292-3eff7f44223e" />
+      <Column Name="Height" Type="System.Double" DbType="FLOAT NOT NULL" CanBeNull="false" UpdateCheck="Never" Precision="53" ed:ValidateRequired="true" ed:Guid="bb38c551-b3f5-4e64-81e4-dce4ebfe3f3d" />
+      <Column Name="Angle" Type="System.Double" DbType="FLOAT NOT NULL" CanBeNull="false" UpdateCheck="Never" Precision="53" ed:ValidateRequired="true" ed:Guid="8a307c96-9704-4a23-b9bb-0fb5a2f27068" />
+      <Column Name="X" Type="System.Double" DbType="FLOAT NOT NULL" CanBeNull="false" UpdateCheck="Never" Precision="53" ed:ValidateRequired="true" ed:Guid="26e14392-fa6c-41a5-8e6d-df91916a06ba" />
+      <Column Name="Y" Type="System.Double" DbType="FLOAT NOT NULL" CanBeNull="false" UpdateCheck="Never" Precision="53" ed:ValidateRequired="true" ed:Guid="3dd627bd-dc6b-45a7-acfb-525fe19a00de" />
+      <Column Name="ComponentPart" Type="System.String" DbType="NVARCHAR(255)" CanBeNull="true" UpdateCheck="Never" MaxLength="255" Unicode="true" ed:ValidateMaxLength="255" ed:ValidateRequired="false" ed:Guid="e996a94e-c190-461c-b44e-f4258923b6dd" />
+      <Column Name="ComponentID" Type="System.Guid" DbType="UNIQUEIDENTIFIER NOT NULL" CanBeNull="false" UpdateCheck="Never" ed:ValidateRequired="true" ed:Guid="1c89668f-1968-4cf3-b096-11aa864cb2c8" />
+      <Association Name="Component_Alarm" ed:AssociationGuid="0369cabc-0ce2-45b8-9571-fa4e5a30b2c1" Member="Component" ed:Guid="06c86832-5d50-4540-8c55-6a7663c68bd5" ThisKey="ComponentID" OtherKey="ID" Type="Component" DeleteRule="CASCADE" IsForeignKey="true" />
+    </Type>
+  </Table>
+  <Table Name="dbo.BadMark" Member="BadMarks">
+    <Type Name="BadMark" ed:Guid="711a874e-b560-406e-843a-1f80e1df7b08">
+      <Column Name="ID" Type="System.Guid" DbType="UNIQUEIDENTIFIER NOT NULL" IsPrimaryKey="true" CanBeNull="false" UpdateCheck="Always" ed:ValidateRequired="true" ed:Guid="67abd878-3291-45c2-b13f-f6a4f0b6bd5e" />
+      <Column Name="Name" Type="System.String" DbType="NVARCHAR(255) NOT NULL" CanBeNull="false" UpdateCheck="Never" MaxLength="255" Unicode="true" ed:ValidateMaxLength="255" ed:ValidateRequired="true" ed:Guid="407a63ae-3175-4a6a-a0bb-6fa335982ea2" />
+      <Column Name="X" Type="System.Double" DbType="FLOAT NOT NULL" CanBeNull="false" UpdateCheck="Never" Precision="53" ed:ValidateRequired="true" ed:Guid="70498a40-8d4b-4a15-a99a-10de570fc3ff" />
+      <Column Name="Y" Type="System.Double" DbType="FLOAT NOT NULL" CanBeNull="false" UpdateCheck="Never" Precision="53" ed:ValidateRequired="true" ed:Guid="bbe266db-c92b-49cb-8710-1e64bae2f90b" />
+      <Column Name="BlockID" Type="System.Guid" DbType="UNIQUEIDENTIFIER NOT NULL" CanBeNull="false" UpdateCheck="Never" ed:ValidateRequired="true" ed:Guid="f1fad6cf-b060-4640-b9d6-e26764f88e8b" />
+      <Association Name="Block_BadMark" ed:AssociationGuid="70370acc-74e9-4c5b-b636-ba97ebc7ba90" Member="Block" ed:Guid="d913c41f-7846-45bb-ab11-11645a59e23f" ThisKey="BlockID" OtherKey="ID" Type="Block" DeleteRule="CASCADE" IsForeignKey="true" />
+    </Type>
+  </Table>
+  <Table Name="dbo.Barcode" Member="Barcodes">
+    <Type Name="Barcode" ed:Guid="a1941b16-be20-41e7-a853-52cfea2cc53a">
+      <Column Name="ID" Type="System.Guid" DbType="UNIQUEIDENTIFIER NOT NULL" IsPrimaryKey="true" CanBeNull="false" UpdateCheck="Always" ed:ValidateRequired="true" ed:Guid="d09f67e5-e151-4881-b402-4d225836e81f" />
+      <Column Name="Name" Type="System.String" DbType="NVARCHAR(255) NOT NULL" CanBeNull="false" UpdateCheck="Never" MaxLength="255" Unicode="true" ed:ValidateMaxLength="255" ed:ValidateRequired="true" ed:Guid="8a9c29a4-8990-41e1-a5b7-40df5777f3a9" />
+      <Column Name="X" Type="System.Double" DbType="FLOAT NOT NULL" CanBeNull="false" UpdateCheck="Never" Precision="53" ed:ValidateRequired="true" ed:Guid="5932a317-3ce5-415c-9c96-7ca3033728ec" />
+      <Column Name="Y" Type="System.Double" DbType="FLOAT NOT NULL" CanBeNull="false" UpdateCheck="Never" Precision="53" ed:ValidateRequired="true" ed:Guid="39fef0a5-7908-4e34-9e53-0b1ffd7b6b94" />
+      <Column Name="CodeText" Type="System.String" DbType="NVARCHAR(255)" CanBeNull="true" UpdateCheck="Never" MaxLength="255" Unicode="true" ed:ValidateMaxLength="255" ed:ValidateRequired="false" ed:Guid="391abf13-bc71-4a26-915b-89efdbd15424" />
+      <Column Name="Validator" Type="System.String" DbType="NVARCHAR(MAX)" CanBeNull="true" UpdateCheck="Never" Unicode="true" ed:ValidateRequired="false" ed:Guid="449a7bf8-431c-4b44-8e8d-fb933d85e532" />
+      <Column Name="TopImage" Type="System.Byte[]" DbType="VARBINARY(MAX)" CanBeNull="true" UpdateCheck="Never" ed:ValidateRequired="false" ed:Guid="30e41418-086a-4939-acd8-b9a523b008e1" />
+      <Column Name="SideImage" Type="System.Byte[]" DbType="VARBINARY(MAX)" CanBeNull="true" UpdateCheck="Never" ed:ValidateRequired="false" ed:Guid="17e244ae-374c-4ee3-ab3c-a49872d95151" />
+      <Column Name="Angle" Type="System.Double" DbType="FLOAT NOT NULL" CanBeNull="false" UpdateCheck="Never" Precision="53" ed:ValidateRequired="true" ed:Guid="fa4db87f-817d-4d96-b819-8464c15227f7" />
+      <Column Name="BlockID" Type="System.Guid" DbType="UNIQUEIDENTIFIER NOT NULL" CanBeNull="false" UpdateCheck="Never" ed:ValidateRequired="true" ed:Guid="dc65d75e-c60d-43b2-93da-7aec1ba2defb" />
+      <Association Name="Block_Barcode" ed:AssociationGuid="1ef389cf-b174-4957-9e32-365da756a229" Member="Block" ed:Guid="1f00b9ec-2aae-4ba9-af47-fe5ea944e4e5" ThisKey="BlockID" OtherKey="ID" Type="Block" DeleteRule="CASCADE" IsForeignKey="true" />
+    </Type>
+  </Table>
+  <Table Name="dbo.Block" Member="Blocks">
+    <Type Name="Block" ed:Guid="4f5bae1d-ed2e-47a2-932f-5712a07b8dff">
+      <Column Name="ID" Type="System.Guid" DbType="UNIQUEIDENTIFIER NOT NULL" IsPrimaryKey="true" CanBeNull="false" UpdateCheck="Always" ed:ValidateRequired="true" ed:Guid="0a2141bd-fac0-4599-9293-75d6355c93ef" />
+      <Column Name="Number" Type="System.Int32" DbType="INT NOT NULL" CanBeNull="false" UpdateCheck="Never" Precision="10" ed:ValidateRequired="true" ed:Guid="ca99e358-f52f-441b-a402-d39c8372765c" />
+      <Column Name="Name" Type="System.String" DbType="NVARCHAR(255)" CanBeNull="true" UpdateCheck="Never" MaxLength="255" Unicode="true" ed:ValidateMaxLength="255" ed:ValidateRequired="false" ed:Guid="9397529a-3d0c-4445-825d-95cec579fb23" />
+      <Column Name="Side" Type="System.String" DbType="NCHAR(1) NOT NULL" CanBeNull="false" UpdateCheck="Never" FixedLength="true" MaxLength="1" Unicode="true" ed:ValidateMaxLength="1" ed:ValidateRequired="true" ed:Guid="0079e4bd-d9af-4664-83b8-ab386ab259ef" />
+      <Column Name="TotalComponentCount" Type="System.Int32" DbType="INT NOT NULL" CanBeNull="false" UpdateCheck="Never" Precision="10" ed:ValidateRequired="true" ed:Guid="5953c349-8501-449d-a0b0-0ddb12ae11c2" />
+      <Column Name="InspectionID" Type="System.Guid" DbType="UNIQUEIDENTIFIER NOT NULL" CanBeNull="false" UpdateCheck="Never" ed:ValidateRequired="true" ed:Guid="d3fab1be-0309-4de2-8183-d35764e589f6" />
+      <Association Name="Block_BadMark" ed:AssociationGuid="70370acc-74e9-4c5b-b636-ba97ebc7ba90" Member="BadMarks" ed:Guid="f6be5277-8d1a-44d1-a29e-c194c600d617" ThisKey="ID" OtherKey="BlockID" Type="BadMark" />
+      <Association Name="Block_Barcode" ed:AssociationGuid="1ef389cf-b174-4957-9e32-365da756a229" Member="Barcodes" ed:Guid="aa4ad213-d80e-4cfb-8c4e-4ad6b89b4379" ThisKey="ID" OtherKey="BlockID" Type="Barcode" />
+      <Association Name="Inspection_Block" ed:AssociationGuid="f2e9489d-a4ea-4413-b5da-d158a5625784" Member="Inspection" ed:Guid="02b936d9-025d-4842-8db8-41df659b60cc" ThisKey="InspectionID" OtherKey="ID" Type="Inspection" DeleteRule="CASCADE" IsForeignKey="true" />
+      <Association Name="Block_Component" ed:AssociationGuid="62ded576-7fbe-4d61-943c-37048c12be3e" Member="Components" ed:Guid="75bbf4e3-fa44-44ba-bb0f-f6cf0b272ee8" ThisKey="ID" OtherKey="BlockID" Type="Component" />
+      <Association Name="Block_Mark" ed:AssociationGuid="ecc2a5eb-af12-42a8-b920-afc21ac9431e" Member="Marks" ed:Guid="b892bea6-64b4-4fa0-b3e0-030c1a04339e" ThisKey="ID" OtherKey="BlockID" Type="Mark" />
+    </Type>
+  </Table>
+  <Table Name="dbo.Component" Member="Components">
+    <Type Name="Component" ed:Guid="d38245c2-221b-4ba4-8cbb-3ca41e1bed01">
+      <Column Name="ID" Type="System.Guid" DbType="UNIQUEIDENTIFIER NOT NULL" IsPrimaryKey="true" CanBeNull="false" UpdateCheck="Always" ed:ValidateRequired="true" ed:Guid="aacddff2-2940-450b-a738-ee329e4daf43" />
+      <Column Name="Name" Type="System.String" DbType="NVARCHAR(255) NOT NULL" CanBeNull="false" UpdateCheck="Never" MaxLength="255" Unicode="true" ed:ValidateMaxLength="255" ed:ValidateRequired="true" ed:Guid="0dc18362-8026-4c98-8b50-f7ba217e9924" />
+      <Column Name="X" Type="System.Double" DbType="FLOAT NOT NULL" CanBeNull="false" UpdateCheck="Never" Precision="53" ed:ValidateRequired="true" ed:Guid="0c467e1d-f2c7-45b4-9e66-3871cdc8743b" />
+      <Column Name="Y" Type="System.Double" DbType="FLOAT NOT NULL" CanBeNull="false" UpdateCheck="Never" Precision="53" ed:ValidateRequired="true" ed:Guid="671c4be0-2094-45b4-8405-8614c1cd1936" />
+      <Column Name="Library" Type="System.String" DbType="NVARCHAR(255)" CanBeNull="true" UpdateCheck="Never" MaxLength="255" Unicode="true" ed:ValidateMaxLength="255" ed:ValidateRequired="false" ed:Guid="381cd0f6-35ac-4283-b456-6b3c2079e1e2" />
+      <Column Name="IsVirtual" Type="System.Boolean" DbType="BIT NOT NULL" CanBeNull="false" UpdateCheck="Never" ed:ValidateRequired="true" ed:Guid="aba1e056-59ec-43f5-9d96-97307fcc4df9" />
+      <Column Name="Angle" Type="System.Double" DbType="FLOAT NOT NULL" CanBeNull="false" UpdateCheck="Never" Precision="53" ed:ValidateRequired="true" ed:Guid="db4925c6-7e6a-4ee5-99d6-908c9af173fe" />
+      <Column Name="ImageWidth" Type="System.Double" DbType="FLOAT NOT NULL" CanBeNull="false" UpdateCheck="Never" Precision="53" ed:ValidateRequired="true" ed:Guid="109d800d-380a-47da-8f0d-8bd154b90c6d" />
+      <Column Name="ImageHeight" Type="System.Double" DbType="FLOAT NOT NULL" CanBeNull="false" UpdateCheck="Never" Precision="53" ed:ValidateRequired="true" ed:Guid="f897d5e7-e25c-4e2b-9e3d-8ba97b2e2f59" />
+      <Column Name="TopImage" Type="System.Byte[]" DbType="VARBINARY(MAX)" CanBeNull="true" UpdateCheck="Never" ed:ValidateRequired="false" ed:Guid="feb16aec-b294-4f15-8407-a5745cefdbf9" />
+      <Column Name="SideImage" Type="System.Byte[]" DbType="VARBINARY(MAX)" CanBeNull="true" UpdateCheck="Never" ed:ValidateRequired="false" ed:Guid="0a994cf1-ebbd-4d84-b232-73d80e89d33a" />
+      <Column Name="TopReferenceImage" Type="System.Byte[]" DbType="VARBINARY(MAX)" CanBeNull="true" UpdateCheck="Never" ed:ValidateRequired="false" ed:Guid="6fde9367-919c-4b10-b155-f2acef5e17a8" />
+      <Column Name="SideReferenceImage" Type="System.Byte[]" DbType="VARBINARY(MAX)" CanBeNull="true" UpdateCheck="Never" ed:ValidateRequired="false" ed:Guid="07ffdd37-efe1-4041-ac83-ba17525ef33a" />
+      <Column Name="Machine" Type="System.String" DbType="NVARCHAR(255)" CanBeNull="true" UpdateCheck="Never" MaxLength="255" Unicode="true" ed:ValidateMaxLength="255" ed:ValidateRequired="false" ed:Guid="adad2c58-a551-48d3-8927-5a767788e866" />
+      <Column Name="BlockID" Type="System.Guid" DbType="UNIQUEIDENTIFIER NOT NULL" CanBeNull="false" UpdateCheck="Never" ed:ValidateRequired="true" ed:Guid="a9ab9d2e-ef56-45b6-b562-9b4212d78774" />
+      <Column Name="Catalog" Type="System.String" DbType="NVARCHAR(255)" CanBeNull="true" UpdateCheck="Never" MaxLength="255" Unicode="true" ed:ValidateMaxLength="255" ed:ValidateRequired="false" ed:Guid="2ca74347-b999-4669-835d-75f199ea1ddf" />
+      <Association Name="Component_Alarm" ed:AssociationGuid="0369cabc-0ce2-45b8-9571-fa4e5a30b2c1" Member="Alarms" ed:Guid="f0ad476c-f1a5-40fd-b293-8f2c0870164c" ThisKey="ID" OtherKey="ComponentID" Type="Alarm" />
+      <Association Name="Block_Component" ed:AssociationGuid="62ded576-7fbe-4d61-943c-37048c12be3e" Member="Block" ed:Guid="e1241594-f6e4-4df6-8898-5f5741b8a75c" ThisKey="BlockID" OtherKey="ID" Type="Block" DeleteRule="CASCADE" IsForeignKey="true" />
+    </Type>
+  </Table>
+  <Table Name="dbo.Inspection" Member="Inspections">
+    <Type Name="Inspection" ed:Guid="fe0fc481-6cd3-4ad6-b976-41b685453e31">
+      <Column Name="ID" Type="System.Guid" DbType="UNIQUEIDENTIFIER NOT NULL" IsPrimaryKey="true" CanBeNull="false" UpdateCheck="Always" ed:ValidateRequired="true" ed:Guid="2fd5eb6e-1812-4e13-adb7-011a3fe54b43" />
+      <Column Name="BoardName" Type="System.String" DbType="NVARCHAR(255) NOT NULL" CanBeNull="false" UpdateCheck="Never" MaxLength="255" Unicode="true" ed:ValidateMaxLength="255" ed:ValidateRequired="true" ed:Guid="73389018-c905-45b3-83cf-ee9d06a1c8a3" />
+      <Column Name="BoardWidth" Type="System.Double" DbType="FLOAT NOT NULL" CanBeNull="false" UpdateCheck="Never" Precision="53" ed:ValidateRequired="true" ed:Guid="49bcbb82-0bb0-4847-926d-3653ea49bd8a" />
+      <Column Name="BoardHeight" Type="System.Double" DbType="FLOAT NOT NULL" CanBeNull="false" UpdateCheck="Never" Precision="53" ed:ValidateRequired="true" ed:Guid="cb95067e-8c90-4df2-9d9a-fa072c86fc0a" />
+      <Column Name="InspectionDateTime" Type="System.DateTime" DbType="DATETIME NOT NULL" CanBeNull="false" UpdateCheck="Never" ed:ValidateRequired="true" ed:Guid="3f23a1ec-6f32-4d7d-b586-8c07f2d7ad9c" />
+      <Column Name="BoardImage" Type="System.Byte[]" DbType="VARBINARY(MAX)" CanBeNull="true" UpdateCheck="Never" ed:ValidateRequired="false" ed:Guid="d215719b-10de-424c-8de1-d2bc88dec236" />
+      <Column Name="GlobalMatchingSampleCount" Type="System.Int32" DbType="INT" CanBeNull="true" UpdateCheck="Never" Precision="10" ed:ValidateRequired="false" ed:Guid="07ce36ac-9080-44a8-9930-8228bfc5aa65" />
+      <Column Name="LogonID" Type="System.String" DbType="NVARCHAR(255) NOT NULL" CanBeNull="false" UpdateCheck="Never" MaxLength="255" Unicode="true" ed:ValidateMaxLength="255" ed:ValidateRequired="true" ed:Guid="b7fb575c-9de6-4254-9bac-d5cafeb57ff9" />
+      <Column Name="Operator" Type="System.String" DbType="NVARCHAR(255) NOT NULL" CanBeNull="false" UpdateCheck="Never" MaxLength="255" Unicode="true" ed:ValidateMaxLength="255" ed:ValidateRequired="true" ed:Guid="b76d9af6-9985-4fc8-b600-3b733e083f93" />
+      <Column Name="Shift" Type="System.String" DbType="NVARCHAR(255)" CanBeNull="true" UpdateCheck="Never" MaxLength="255" Unicode="true" ed:ValidateMaxLength="255" ed:ValidateRequired="false" ed:Guid="9e1da2d8-8fe7-49f6-ae74-d2f0a36a7a7f" />
+      <Column Name="Line" Type="System.String" DbType="NVARCHAR(255)" CanBeNull="true" UpdateCheck="Never" MaxLength="255" Unicode="true" ed:ValidateMaxLength="255" ed:ValidateRequired="false" ed:Guid="30f91048-4d9a-4df1-ba51-197f469f53c4" />
+      <Column Name="ProductLot" Type="System.String" DbType="NVARCHAR(255)" CanBeNull="true" UpdateCheck="Never" MaxLength="255" Unicode="true" ed:ValidateMaxLength="255" ed:ValidateRequired="false" ed:Guid="f689cc69-a1a0-4f2f-b970-fe6eb992275f" />
+      <Column Name="Station" Type="System.String" DbType="NVARCHAR(255)" CanBeNull="true" UpdateCheck="Never" MaxLength="255" Unicode="true" ed:ValidateMaxLength="255" ed:ValidateRequired="false" ed:Guid="814bd841-bddc-40d0-90eb-c97767456246" />
+      <Column Name="Status" Type="System.Int32" DbType="INT NOT NULL" CanBeNull="false" UpdateCheck="Never" Precision="10" ed:ValidateRequired="true" ed:Guid="e3168873-ec20-42a8-a559-8f594e1dc754" />
+      <Column Name="RailID" Type="System.Int32" DbType="INT NOT NULL" CanBeNull="false" UpdateCheck="Never" DefaultValue="1" Precision="10" ed:ValidateRequired="true" ed:Guid="c78503db-53b6-467e-9b42-43eeabcca3fd" />
+      <Column Name="Side" Type="System.String" DbType="NVARCHAR(1) NOT NULL" CanBeNull="false" UpdateCheck="Never" DefaultValue="&quot;N'A'&quot;" MaxLength="1" Unicode="true" ed:ValidateMaxLength="1" ed:ValidateRequired="true" ed:Guid="ee35ea87-64d2-4b8f-921c-286f399ed547" />
+      <Column Name="CycleTime" Type="System.Double" DbType="FLOAT NOT NULL" CanBeNull="false" UpdateCheck="Never" DefaultValue="0" Precision="53" ed:ValidateRequired="true" ed:Guid="61f68b06-587a-4b20-aeea-1336b50f7cd5" />
+      <Column Name="IsSend" Type="System.Int32" DbType="INT" CanBeNull="true" UpdateCheck="Never" Precision="10" ed:ValidateRequired="false" ed:Guid="5f1044a5-1e56-4841-8e60-3a95aff4bae1" />
+      <Association Name="Inspection_Block" ed:AssociationGuid="f2e9489d-a4ea-4413-b5da-d158a5625784" Member="Blocks" ed:Guid="a569e004-d08c-48aa-95b9-e1f53a4fe2ba" ThisKey="ID" OtherKey="InspectionID" Type="Block" />
+    </Type>
+  </Table>
+  <Table Name="dbo.Mark" Member="Marks">
+    <Type Name="Mark" ed:Guid="6fe4f3e9-cf70-417a-a43c-02adeeb59d32">
+      <Column Name="ID" Type="System.Guid" DbType="UNIQUEIDENTIFIER NOT NULL" IsPrimaryKey="true" CanBeNull="false" UpdateCheck="Always" ed:ValidateRequired="true" ed:Guid="0a5b7fd5-7ac2-4c61-a2dc-876b29307ad4" />
+      <Column Name="Name" Type="System.String" DbType="NVARCHAR(255) NOT NULL" CanBeNull="false" UpdateCheck="Never" MaxLength="255" Unicode="true" ed:ValidateMaxLength="255" ed:ValidateRequired="true" ed:Guid="e4407215-38e3-4d83-870f-359638fdff31" />
+      <Column Name="X" Type="System.Double" DbType="FLOAT NOT NULL" CanBeNull="false" UpdateCheck="Never" Precision="53" ed:ValidateRequired="true" ed:Guid="d660e588-0449-4384-a153-d79b2503e18f" />
+      <Column Name="Y" Type="System.Double" DbType="FLOAT NOT NULL" CanBeNull="false" UpdateCheck="Never" Precision="53" ed:ValidateRequired="true" ed:Guid="31d0b84b-7e73-4e67-89b3-9ea28bc2aa66" />
+      <Column Name="Type" Type="System.Int32" DbType="INT NOT NULL" CanBeNull="false" UpdateCheck="Never" Precision="10" ed:ValidateRequired="true" ed:Guid="5c3d02e8-20d4-43f0-870d-f2a2251816ce" />
+      <Column Name="BlockID" Type="System.Guid" DbType="UNIQUEIDENTIFIER NOT NULL" CanBeNull="false" UpdateCheck="Never" ed:ValidateRequired="true" ed:Guid="27596ccd-4f68-4880-baf9-b0e5ae5a09ce" />
+      <Association Name="Block_Mark" ed:AssociationGuid="ecc2a5eb-af12-42a8-b920-afc21ac9431e" Member="Block" ed:Guid="56347d0c-2e55-427e-9fec-8d368de26e06" ThisKey="BlockID" OtherKey="ID" Type="Block" DeleteRule="CASCADE" IsForeignKey="true" />
+    </Type>
+  </Table>
+</Database>

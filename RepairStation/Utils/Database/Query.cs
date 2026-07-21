@@ -1,9 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Data.SqlClient;
 using System.Linq;
 using AI_AOI.Config;
+using HOLLYAOIREPAIRAIContext;
 
 namespace AI_AOI.Database
 {
@@ -18,55 +17,76 @@ namespace AI_AOI.Database
             string barcodeKeyword,
             int topN = 300)
         {
-            var ret = new List<InspectionStatisticRow>();
-
             try
             {
                 string connStr = SoftwareSettingsManager.Current.HOLLY_AOI_REPAIR_AIConnectionString;
-                using (var conn = new SqlConnection(connStr))
-                using (var cmd = conn.CreateCommand())
+                using (var db = new HOLLYAOIREPAIRAIDataContext(connStr))
                 {
-                    conn.Open();
+                    string line = lineName ?? string.Empty;
+                    string barcode = barcodeKeyword ?? string.Empty;
 
-                    bool hasTop = topN > 0;
-                    cmd.CommandText = BuildInspectionStatisticsSql(hasTop);
-                    cmd.Parameters.Add("@LineName", SqlDbType.NVarChar, 100).Value = (object)(lineName ?? string.Empty);
-                    cmd.Parameters.Add("@FromTime", SqlDbType.DateTime).Value = fromTime.HasValue ? (object)fromTime.Value : DBNull.Value;
-                    cmd.Parameters.Add("@ToTime", SqlDbType.DateTime).Value = toTime.HasValue ? (object)toTime.Value : DBNull.Value;
-                    cmd.Parameters.Add("@BarcodeKeyword", SqlDbType.NVarChar, 200).Value = (object)(barcodeKeyword ?? string.Empty);
-                    if (hasTop)
+                    var query = db.Inspections.AsQueryable();
+
+                    if (!string.IsNullOrEmpty(line))
                     {
-                        cmd.Parameters.Add("@TopN", SqlDbType.Int).Value = topN;
+                        query = query.Where(i => i.Line == line);
                     }
 
-                    using (var reader = cmd.ExecuteReader())
+                    if (fromTime.HasValue)
                     {
-                        int no = 1;
-                        while (reader.Read())
+                        query = query.Where(i => i.InspectionDateTime >= fromTime.Value);
+                    }
+
+                    if (toTime.HasValue)
+                    {
+                        query = query.Where(i => i.InspectionDateTime <= toTime.Value);
+                    }
+
+                    if (!string.IsNullOrEmpty(barcode))
+                    {
+                        query = query.Where(i => i.Blocks.Any(b => b.Barcodes.Any(bc => bc.CodeText != null && bc.CodeText.Contains(barcode))));
+                    }
+
+                    query = query.OrderByDescending(i => i.InspectionDateTime);
+                    if (topN > 0)
+                    {
+                        query = query.Take(topN);
+                    }
+
+                    int no = 1;
+                    return query
+                        .AsEnumerable()
+                        .Select(i => new InspectionStatisticRow
                         {
-                            ret.Add(new InspectionStatisticRow
-                            {
-                                No = no++,
-                                InspectionID = reader.GetGuid(reader.GetOrdinal("InspectionID")),
-                                InspectedDate = reader.GetDateTime(reader.GetOrdinal("InspectedDate")),
-                                Barcode = ReadString(reader, "Barcode"),
-                                BlockCount = ReadInt(reader, "BlockCount"),
-                                AlarmComponentCount = ReadInt(reader, "AlarmComponentCount"),
-                                TotalComponentCount = ReadInt(reader, "TotalComponentCount"),
-                                GlobalMatchingCount = ReadInt(reader, "GlobalMatchingCount"),
-                                MarkCount = ReadInt(reader, "MarkCount"),
-                                BadBlockCount = ReadInt(reader, "BadBlockCount"),
-                                BoardName = ReadString(reader, "BoardName"),
-                                ProductLot = ReadString(reader, "ProductLot"),
-                                Line = ReadString(reader, "Line"),
-                                Station = ReadString(reader, "Station"),
-                                Operator = ReadString(reader, "Operator"),
-                                Rail = ReadInt(reader, "Rail"),
-                                Side = ReadString(reader, "Side"),
-                                Status = ReadInt(reader, "Status")
-                            });
-                        }
-                    }
+                            No = no++,
+                            InspectionID = i.ID,
+                            InspectedDate = i.InspectionDateTime,
+                            Barcode = i.Blocks.SelectMany(b => b.Barcodes).OrderBy(bc => bc.ID).Select(bc => bc.CodeText).FirstOrDefault() ?? string.Empty,
+                            BlockCount = i.Blocks.Count,
+                            AlarmComponentCount = i.Blocks
+                                .SelectMany(b => b.Components)
+                                .Where(c => c.Alarms.Any(a => (a.DefectType ?? string.Empty) != "OK"))
+                                .Select(c => c.ID)
+                                .Distinct()
+                                .Count(),
+                            TotalComponentCount = i.Blocks.Sum(b => b.TotalComponentCount),
+                            GlobalMatchingCount = 0,
+                            MarkCount = i.Blocks.SelectMany(b => b.Marks).Count(),
+                            BadBlockCount = i.Blocks
+                                .SelectMany(b => b.BadMarks)
+                                .Select(bm => bm.BlockID)
+                                .Distinct()
+                                .Count(),
+                            BoardName = i.BoardName ?? string.Empty,
+                            ProductLot = i.ProductLot ?? string.Empty,
+                            Line = i.Line ?? string.Empty,
+                            Station = i.Station ?? string.Empty,
+                            Operator = i.Operator ?? string.Empty,
+                            Rail = i.RailID,
+                            Side = i.Side ?? string.Empty,
+                            Status = i.Status
+                        })
+                        .ToList();
                 }
             }
             catch (Exception ex)
@@ -74,8 +94,6 @@ namespace AI_AOI.Database
                 Logger.Error(ex, "GetInspectionStatistics failed.");
                 throw;
             }
-
-            return ret;
         }
 
         public static QueryResult GetInspectionDetail(Guid inspectionId)
@@ -83,79 +101,43 @@ namespace AI_AOI.Database
             try
             {
                 string connStr = SoftwareSettingsManager.Current.HOLLY_AOI_REPAIR_AIConnectionString;
-                using (var conn = new SqlConnection(connStr))
-                using (var cmd = conn.CreateCommand())
+                using (var db = new HOLLYAOIREPAIRAIDataContext(connStr))
                 {
-                    conn.Open();
-                    cmd.CommandText = @"
-SELECT
-    i.ID,
-    i.InspectionDateTime,
-    i.BoardName,
-    i.BoardImage,
-    i.BoardWidth,
-    i.BoardHeight,
-    i.ProductLot,
-    i.Line,
-    i.Station,
-    i.RailID,
-    CASE
-        WHEN EXISTS (
-            SELECT 1
-            FROM dbo.Block b
-            INNER JOIN dbo.Mark m ON m.BlockID = b.ID
-            WHERE b.InspectionID = i.ID
-        ) THEN 1
-        ELSE 0
-    END AS HasMark,
-    (
-        SELECT TOP (1) bc.CodeText
-        FROM dbo.Block b
-        INNER JOIN dbo.Barcode bc ON bc.BlockID = b.ID
-        WHERE b.InspectionID = i.ID
-          AND ISNULL(bc.CodeText, '') <> ''
-        ORDER BY bc.ID
-    ) AS Barcode
-FROM dbo.Inspection i
-WHERE i.ID = @InspectionID;";
-                    cmd.Parameters.Add("@InspectionID", SqlDbType.UniqueIdentifier).Value = inspectionId;
-
-                    QueryResult ret = null;
-                    using (var reader = cmd.ExecuteReader())
+                    var inspection = db.Inspections.FirstOrDefault(i => i.ID == inspectionId);
+                    if (inspection == null)
                     {
-                        if (!reader.Read())
-                        {
-                            return null;
-                        }
-
-                        ret = new QueryResult
-                        {
-                            ID = reader.GetGuid(reader.GetOrdinal("ID")),
-                            SN = ReadString(reader, "Barcode"),
-                            Time = reader.GetDateTime(reader.GetOrdinal("InspectionDateTime")),
-                            BoardName = ReadString(reader, "BoardName"),
-                            BoardImageBytes = ReadBytes(reader, "BoardImage"),
-                            BoardWidth = ReadDouble(reader, "BoardWidth"),
-                            BoardHeight = ReadDouble(reader, "BoardHeight"),
-                            ProductLot = ReadString(reader, "ProductLot"),
-                            Line = ReadString(reader, "Line"),
-                            Station = ReadString(reader, "Station"),
-                            RailID = ReadInt(reader, "RailID"),
-                            HasMark = ReadBool(reader, "HasMark"),
-                            BlockNumbers = new List<int>(),
-                            DefectLocations = new List<DefectLocation>()
-                        };
+                        return null;
                     }
+
+                    var ret = new QueryResult
+                    {
+                        ID = inspection.ID,
+                        SN = inspection.Blocks
+                            .SelectMany(b => b.Barcodes)
+                            .Where(bc => !string.IsNullOrEmpty(bc.CodeText))
+                            .OrderBy(bc => bc.ID)
+                            .Select(bc => bc.CodeText)
+                            .FirstOrDefault(),
+                        Time = inspection.InspectionDateTime,
+                        BoardName = inspection.BoardName ?? string.Empty,
+                        BoardImageBytes = inspection.BoardImage,
+                        BoardWidth = inspection.BoardWidth,
+                        BoardHeight = inspection.BoardHeight,
+                        ProductLot = inspection.ProductLot ?? string.Empty,
+                        Line = inspection.Line ?? string.Empty,
+                        Station = inspection.Station ?? string.Empty,
+                        RailID = inspection.RailID,
+                        HasMark = inspection.Blocks.Any(b => b.Marks.Any()),
+                        BlockNumbers = inspection.Blocks.Select(b => b.Number).Distinct().OrderBy(n => n).ToList(),
+                        DefectLocations = GetDefectLocations(db, inspectionId)
+                    };
 
                     if (string.IsNullOrWhiteSpace(ret.SN))
                     {
                         ret.SN = ret.ID.ToString();
                     }
 
-                    ret.BlockNumbers = GetInspectionBlockNumbers(conn, inspectionId);
-                    ret.DefectLocations = GetDefectLocations(conn, inspectionId);
                     ret.Status = ret.DefectLocations.Count == 0;
-
                     return ret;
                 }
             }
@@ -166,249 +148,61 @@ WHERE i.ID = @InspectionID;";
             }
         }
 
-        private static List<int> GetInspectionBlockNumbers(SqlConnection conn, Guid inspectionId)
+        private static List<DefectLocation> GetDefectLocations(HOLLYAOIREPAIRAIDataContext db, Guid inspectionId)
         {
-            var blocks = new List<int>();
-
-            using (var cmd = conn.CreateCommand())
-            {
-                cmd.CommandText = @"
-SELECT b.Number
-FROM dbo.Block b
-WHERE b.InspectionID = @InspectionID
-ORDER BY b.Number;";
-                cmd.Parameters.Add("@InspectionID", SqlDbType.UniqueIdentifier).Value = inspectionId;
-
-                using (var reader = cmd.ExecuteReader())
+            return db.Components
+                .Where(c => c.Block.InspectionID == inspectionId)
+                .OrderBy(c => c.Block.Number)
+                .ThenBy(c => c.Name)
+                .ThenBy(c => c.ID)
+                .AsEnumerable()
+                .Select(c =>
                 {
-                    while (reader.Read())
+                    var alarms = c.Alarms
+                        .Where(a => !string.Equals(a.DefectType ?? string.Empty, "OK", StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+
+                    if (alarms.Count == 0)
                     {
-                        blocks.Add(ReadInt(reader, "Number"));
+                        return null;
                     }
-                }
-            }
 
-            return blocks.Distinct().ToList();
-        }
-
-        private static List<DefectLocation> GetDefectLocations(SqlConnection conn, Guid inspectionId)
-        {
-            var componentMap = new Dictionary<Guid, DefectLocation>();
-            var order = new List<Guid>();
-
-            using (var cmd = conn.CreateCommand())
-            {
-                cmd.CommandText = @"
-SELECT
-    c.ID AS ComponentID,
-    c.Name,
-    c.Catalog,
-    c.X,
-    c.Y,
-    c.Angle,
-    c.ImageWidth,
-    c.ImageHeight,
-    b.Number AS BlockNumber,
-    c.TopImage,
-    c.SideImage,
-    c.TopReferenceImage,
-    c.SideReferenceImage,
-    a.ID AS AlarmID,
-    a.AlarmType,
-    a.TopImage AS AlarmTopImage,
-    a.SideImage AS AlarmSideImage
-FROM dbo.Component c
-INNER JOIN dbo.Block b ON b.ID = c.BlockID
-LEFT JOIN dbo.Alarm a ON a.ComponentID = c.ID
-WHERE b.InspectionID = @InspectionID
-ORDER BY b.Number, c.Name, c.ID;";
-                cmd.Parameters.Add("@InspectionID", SqlDbType.UniqueIdentifier).Value = inspectionId;
-
-                using (var reader = cmd.ExecuteReader())
-                {
-                    while (reader.Read())
+                    return new DefectLocation
                     {
-                        var componentId = reader.GetGuid(reader.GetOrdinal("ComponentID"));
-                        if (!componentMap.TryGetValue(componentId, out var defect))
-                        {
-                            defect = new DefectLocation
+                        ComponentID = c.ID,
+                        Name = c.Name ?? string.Empty,
+                        Catalog = c.Catalog ?? string.Empty,
+                        X = c.X,
+                        Y = c.Y,
+                        Angle = c.Angle,
+                        Width = c.ImageWidth,
+                        Height = c.ImageHeight,
+                        Block = c.Block.Number,
+                        TopImageBytes = c.TopImage,
+                        SideImageBytes = c.SideImage,
+                        TopReferenceImageBytes = c.TopReferenceImage,
+                        SideReferenceImageBytes = c.SideReferenceImage,
+                        AlarmTopImageBytes = alarms.Select(a => a.TopImage).FirstOrDefault(img => img != null),
+                        AlarmSideImageBytes = alarms.Select(a => a.SideImage).FirstOrDefault(img => img != null),
+                        AlarmInfors = alarms
+                            .Select(a => new AlarmImageInfo
                             {
-                                ComponentID = componentId,
-                                Name = ReadString(reader, "Name"),
-                                Catalog = ReadString(reader, "Catalog"),
-                                X = ReadDouble(reader, "X"),
-                                Y = ReadDouble(reader, "Y"),
-                                Angle = ReadDouble(reader, "Angle"),
-                                Width = ReadDouble(reader, "ImageWidth"),
-                                Height = ReadDouble(reader, "ImageHeight"),
-                                Block = ReadInt(reader, "BlockNumber"),
-                                TopImageBytes = ReadBytes(reader, "TopImage"),
-                                SideImageBytes = ReadBytes(reader, "SideImage"),
-                                TopReferenceImageBytes = ReadBytes(reader, "TopReferenceImage"),
-                                SideReferenceImageBytes = ReadBytes(reader, "SideReferenceImage"),
-                                AlarmInfors = new List<AlarmImageInfo>(),
-                                AlarmTypes = new List<string>()
-                            };
-
-                            componentMap[componentId] = defect;
-                            order.Add(componentId);
-                        }
-
-                        var alarmType = ReadString(reader, "AlarmType");
-                        int alarmIdOrdinal = reader.GetOrdinal("AlarmID");
-                        if (!reader.IsDBNull(alarmIdOrdinal))
-                        {
-                            var alarmInfo = new AlarmImageInfo
-                            {
-                                AlarmID = reader.GetGuid(alarmIdOrdinal),
-                                AlarmType = alarmType,
-                                TopImageBytes = ReadBytes(reader, "AlarmTopImage"),
-                                SideImageBytes = ReadBytes(reader, "AlarmSideImage")
-                            };
-                            defect.AlarmInfors.Add(alarmInfo);
-                        }
-
-                        if (!string.IsNullOrWhiteSpace(alarmType))
-                        {
-                            var normalized = alarmType.Trim();
-                            if (!defect.AlarmTypes.Contains(normalized))
-                            {
-                                defect.AlarmTypes.Add(normalized);
-                            }
-                        }
-
-                        if (defect.AlarmSideImageBytes == null)
-                        {
-                            defect.AlarmSideImageBytes = ReadBytes(reader, "AlarmSideImage");
-                        }
-                        if (defect.AlarmTopImageBytes == null)
-                        {
-                            defect.AlarmTopImageBytes = ReadBytes(reader, "AlarmTopImage");
-                        }
-                    }
-                }
-            }
-
-            return order
-                .Select(id => componentMap[id])
-                .Where(d => d.AlarmTypes.Count > 0)
+                                AlarmID = a.ID,
+                                AlarmType = a.AlarmType ?? string.Empty,
+                                TopImageBytes = a.TopImage,
+                                SideImageBytes = a.SideImage
+                            })
+                            .ToList(),
+                        AlarmTypes = alarms
+                            .Select(a => a.AlarmType)
+                            .Where(t => !string.IsNullOrWhiteSpace(t))
+                            .Select(t => t.Trim())
+                            .Distinct()
+                            .ToList()
+                    };
+                })
+                .Where(d => d != null)
                 .ToList();
-        }
-
-        private static string BuildInspectionStatisticsSql(bool hasTop)
-        {
-            var topClause = hasTop ? "TOP (@TopN)" : string.Empty;
-            return $@"
-SELECT {topClause}
-    i.ID AS InspectionID,
-    i.InspectionDateTime AS InspectedDate,
-    i.BoardName,
-    i.ProductLot,
-    i.Line,
-    i.Station,
-    i.Operator,
-    i.RailID AS Rail,
-    i.Side,
-    i.Status,
-    (
-        SELECT COUNT(*)
-        FROM dbo.Block b
-        WHERE b.InspectionID = i.ID
-    ) AS BlockCount,
-    (
-        SELECT TOP (1) bc.CodeText
-        FROM dbo.Block b
-        INNER JOIN dbo.Barcode bc ON bc.BlockID = b.ID
-        WHERE b.InspectionID = i.ID
-        ORDER BY bc.ID
-    ) AS Barcode,
-    ISNULL((
-        SELECT SUM(ISNULL(b.TotalComponentCount, 0))
-        FROM dbo.Block b
-        WHERE b.InspectionID = i.ID
-    ), 0) AS TotalComponentCount,
-    (
-        SELECT COUNT(*)
-        FROM (
-            SELECT DISTINCT a.ComponentID
-            FROM dbo.Alarm a
-            INNER JOIN dbo.Component c ON c.ID = a.ComponentID
-            INNER JOIN dbo.Block b ON b.ID = c.BlockID
-            WHERE b.InspectionID = i.ID
-              AND ISNULL(a.DefectType, '') <> 'OK'
-        ) q
-    ) AS AlarmComponentCount,
-    (
-        SELECT COUNT(*)
-        FROM dbo.GlobalMatchingAlarm g
-        WHERE g.InspectionID = i.ID
-          AND ISNULL(g.DefectType, '') <> 'OK'
-    ) AS GlobalMatchingCount,
-    (
-        SELECT COUNT(*)
-        FROM dbo.Mark m
-        INNER JOIN dbo.Block b ON b.ID = m.BlockID
-        WHERE b.InspectionID = i.ID
-    ) AS MarkCount,
-    (
-        SELECT COUNT(*)
-        FROM (
-            SELECT DISTINCT bm.BlockID
-            FROM dbo.BadMark bm
-            INNER JOIN dbo.Block b ON b.ID = bm.BlockID
-            WHERE b.InspectionID = i.ID
-        ) q
-    ) AS BadBlockCount
-FROM dbo.Inspection i
-WHERE (@LineName = '' OR i.Line = @LineName)
-  AND (@FromTime IS NULL OR i.InspectionDateTime >= @FromTime)
-  AND (@ToTime IS NULL OR i.InspectionDateTime <= @ToTime)
-  AND (
-        @BarcodeKeyword = ''
-        OR EXISTS (
-            SELECT 1
-            FROM dbo.Block b
-            INNER JOIN dbo.Barcode bc ON bc.BlockID = b.ID
-            WHERE b.InspectionID = i.ID
-              AND bc.CodeText LIKE '%' + @BarcodeKeyword + '%'
-        )
-  )
-ORDER BY i.InspectionDateTime DESC;";
-        }
-
-        private static string ReadString(IDataRecord r, string name)
-        {
-            int i = r.GetOrdinal(name);
-            return r.IsDBNull(i) ? string.Empty : Convert.ToString(r.GetValue(i));
-        }
-
-        private static int ReadInt(IDataRecord r, string name)
-        {
-            int i = r.GetOrdinal(name);
-            return r.IsDBNull(i) ? 0 : Convert.ToInt32(r.GetValue(i));
-        }
-
-        private static double ReadDouble(IDataRecord r, string name)
-        {
-            int i = r.GetOrdinal(name);
-            return r.IsDBNull(i) ? 0d : Convert.ToDouble(r.GetValue(i));
-        }
-
-        private static bool ReadBool(IDataRecord r, string name)
-        {
-            int i = r.GetOrdinal(name);
-            return !r.IsDBNull(i) && Convert.ToBoolean(r.GetValue(i));
-        }
-
-        private static byte[] ReadBytes(IDataRecord r, string name)
-        {
-            int i = r.GetOrdinal(name);
-            if (r.IsDBNull(i))
-            {
-                return null;
-            }
-
-            return r[name] as byte[];
         }
     }
 
@@ -484,4 +278,3 @@ ORDER BY i.InspectionDateTime DESC;";
         public string NgBuffer => Status == 0 ? "■" : string.Empty;
     }
 }
-

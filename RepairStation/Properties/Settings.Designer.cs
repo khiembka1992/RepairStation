@@ -22,5 +22,16 @@ namespace AI_AOI.Properties {
                 return defaultInstance;
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.SpecialSettingAttribute(global::System.Configuration.SpecialSetting.ConnectionString)]
+        [global::System.Configuration.DefaultSettingValueAttribute("Data Source=DESKTOP-CNKEHT4;Initial Catalog=HOLLY-AOI-REPAIR-AI;Integrated Securi" +
+            "ty=True;Connect Timeout=30;Encrypt=True;TrustServerCertificate=True")]
+        public string HOLLY_AOI_REPAIR_AIConnectionString {
+            get {
+                return ((string)(this["HOLLY_AOI_REPAIR_AIConnectionString"]));
+            }
+        }
     }
 }
