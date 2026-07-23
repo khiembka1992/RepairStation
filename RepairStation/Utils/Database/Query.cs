@@ -158,14 +158,15 @@ namespace AI_AOI.Database
                 .AsEnumerable()
                 .Select(c =>
                 {
-                    var alarms = c.Alarms
-                        .Where(a => !string.Equals(a.DefectType ?? string.Empty, "OK", StringComparison.OrdinalIgnoreCase))
-                        .ToList();
+                    //var alarms = c.Alarms
+                    //    .Where(a => !string.Equals(a.DefectType ?? string.Empty, "OK", StringComparison.OrdinalIgnoreCase))
+                    //    .ToList();
 
-                    if (alarms.Count == 0)
-                    {
-                        return null;
-                    }
+                    //if (alarms.Count == 0)
+                    //{
+                    //    return null;
+                    //}
+                    var alarms = c.Alarms;
 
                     return new DefectLocation
                     {

@@ -39,7 +39,7 @@ namespace AI_AOI.Database
             }
             catch (Exception ex)
             {
-                Logger.Debug(ex);
+                Logger.Debug(ex.ToString());
                 return false;
             }
         }
@@ -61,12 +61,12 @@ namespace AI_AOI.Database
             out string error)
         {
             error = null;
+            string moveStage = "prepare confirmation data";
             try
             {
-                if (updateDefectTypes)
-                {
-                    UpdateAlarmDefectTypes(inspectionId, componentDefectTypes);
-                }
+                var confirmedDefectTypes = updateDefectTypes
+                    ? NormalizeDefectMap(componentDefectTypes)
+                    : new Dictionary<Guid, string>();
 
                 string repairAiConn = SoftwareSettingsManager.Current.HOLLY_AOI_REPAIR_AIConnectionString;
                 string repairConn = SoftwareSettingsManager.Current.HOLLY_AOI_REPAIRConnectionString;
@@ -74,6 +74,7 @@ namespace AI_AOI.Database
                 using (var source = new RepairAI.HOLLYAOIREPAIRAIDataContext(repairAiConn))
                 using (var target = new Repair.HOLLYAOIREPAIRDataContext(repairConn))
                 {
+                    moveStage = "load inspection from Repair-AI";
                     var inspection = source.Inspections.FirstOrDefault(i => i.ID == inspectionId);
                     if (inspection == null)
                     {
@@ -81,18 +82,84 @@ namespace AI_AOI.Database
                         return false;
                     }
 
-                    CopyInspection(target, inspection);
+                    moveStage = "check inspection in Repair";
+                    if (target.Inspections.Any(i => i.ID == inspectionId))
+                    {
+                        moveStage = "delete duplicate inspection from Repair-AI";
+                        DeleteInspection(source, inspection);
+
+                        moveStage = "verify duplicate removal from Repair-AI";
+                        if (source.Inspections.Any(i => i.ID == inspectionId))
+                        {
+                            throw new InvalidOperationException(
+                                "Duplicate inspection still exists in Repair-AI after deleting.");
+                        }
+
+                        Logger.Info(
+                            "Removed inspection {0} from Repair-AI because it already exists in Repair.",
+                            inspectionId);
+                        return true;
+                    }
+
+                    if (updateDefectTypes)
+                    {
+                        moveStage = "update alarm confirmation in Repair-AI";
+                        UpdateAlarmDefectTypes(inspectionId, confirmedDefectTypes);
+                    }
+
+                    int? confirmedStatus = updateDefectTypes && confirmedDefectTypes.Count > 0
+                        ? (confirmedDefectTypes.Values.All(IsOkDefectType) ? 1 : 0)
+                        : (int?)null;
+
+                    moveStage = "copy inspection to Repair";
+                    CopyInspection(target, inspection, confirmedDefectTypes, confirmedStatus);
+
+                    moveStage = "verify inspection in Repair";
+                    if (!target.Inspections.Any(i => i.ID == inspectionId))
+                    {
+                        throw new InvalidOperationException("Inspection was not found in Repair after copying.");
+                    }
+
+                    moveStage = "delete inspection from Repair-AI";
                     DeleteInspection(source, inspection);
+
+                    moveStage = "verify inspection removal from Repair-AI";
+                    if (source.Inspections.Any(i => i.ID == inspectionId))
+                    {
+                        throw new InvalidOperationException("Inspection still exists in Repair-AI after deleting.");
+                    }
                 }
 
+                Logger.Info(
+                    "Moved inspection {0} from Repair-AI to Repair successfully.",
+                    inspectionId);
                 return true;
             }
             catch (Exception ex)
             {
-                error = ex.Message;
-                Logger.Error(ex);
+                error = $"Move failed at '{moveStage}': {GetExceptionMessage(ex)}";
+                Logger.Error(
+                    "Move inspection {0} failed at '{1}': {2}",
+                    inspectionId,
+                    moveStage,
+                    ex);
                 return false;
             }
+        }
+
+        private static string GetExceptionMessage(Exception exception)
+        {
+            var messages = new List<string>();
+            for (var current = exception; current != null; current = current.InnerException)
+            {
+                if (!string.IsNullOrWhiteSpace(current.Message) &&
+                    !messages.Contains(current.Message))
+                {
+                    messages.Add(current.Message);
+                }
+            }
+
+            return string.Join(" -> ", messages);
         }
 
         private static void UpdateAlarmDefectTypes(Guid inspectionId, Dictionary<Guid, string> componentDefectTypes)
@@ -105,22 +172,13 @@ namespace AI_AOI.Database
             string connStr = SoftwareSettingsManager.Current.HOLLY_AOI_REPAIR_AIConnectionString;
             using (var db = new RepairAI.HOLLYAOIREPAIRAIDataContext(connStr))
             {
-                var defectByComponent = componentDefectTypes
-                    .Where(kv => kv.Key != Guid.Empty && !string.IsNullOrWhiteSpace(kv.Value))
-                    .ToDictionary(kv => kv.Key, kv => kv.Value.Trim());
-
-                if (defectByComponent.Count == 0)
-                {
-                    return;
-                }
-
                 var alarms = db.Alarms
-                    .Where(a => a.Component.Block.InspectionID == inspectionId && defectByComponent.Keys.Contains(a.ComponentID))
+                    .Where(a => a.Component.Block.InspectionID == inspectionId && componentDefectTypes.Keys.Contains(a.ComponentID))
                     .ToList();
 
                 foreach (var alarm in alarms)
                 {
-                    if (defectByComponent.TryGetValue(alarm.ComponentID, out var defectType))
+                    if (componentDefectTypes.TryGetValue(alarm.ComponentID, out var defectType))
                     {
                         alarm.DefectType = defectType;
                     }
@@ -130,14 +188,33 @@ namespace AI_AOI.Database
             }
         }
 
-        private static void CopyInspection(Repair.HOLLYAOIREPAIRDataContext target, RepairAI.Inspection inspection)
+        private static Dictionary<Guid, string> NormalizeDefectMap(Dictionary<Guid, string> componentDefectTypes)
+        {
+            return (componentDefectTypes ?? new Dictionary<Guid, string>())
+                .Where(kv => kv.Key != Guid.Empty && !string.IsNullOrWhiteSpace(kv.Value))
+                .ToDictionary(kv => kv.Key, kv => kv.Value.Trim());
+        }
+
+        private static bool IsOkDefectType(string defectType)
+        {
+            return string.Equals(
+                (defectType ?? string.Empty).Trim(),
+                "OK",
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static void CopyInspection(
+            Repair.HOLLYAOIREPAIRDataContext target,
+            RepairAI.Inspection inspection,
+            Dictionary<Guid, string> confirmedDefectTypes,
+            int? confirmedStatus)
         {
             if (target.Inspections.Any(i => i.ID == inspection.ID))
             {
                 return;
             }
 
-            target.Inspections.InsertOnSubmit(CloneInspectionTree(inspection));
+            target.Inspections.InsertOnSubmit(CloneInspectionTree(inspection, confirmedDefectTypes, confirmedStatus));
             target.SubmitChanges();
         }
 
@@ -147,7 +224,7 @@ namespace AI_AOI.Database
             source.SubmitChanges();
         }
 
-        private static Repair.Inspection CloneInspection(RepairAI.Inspection source)
+        private static Repair.Inspection CloneInspection(RepairAI.Inspection source, int? statusOverride)
         {
             return new Repair.Inspection
             {
@@ -164,7 +241,7 @@ namespace AI_AOI.Database
                 Line = source.Line,
                 ProductLot = source.ProductLot,
                 Station = source.Station,
-                Status = source.Status,
+                Status = statusOverride ?? source.Status,
                 RailID = source.RailID,
                 Side = source.Side,
                 CycleTime = source.CycleTime,
@@ -172,9 +249,12 @@ namespace AI_AOI.Database
             };
         }
 
-        private static Repair.Inspection CloneInspectionTree(RepairAI.Inspection source)
+        private static Repair.Inspection CloneInspectionTree(
+            RepairAI.Inspection source,
+            Dictionary<Guid, string> confirmedDefectTypes,
+            int? confirmedStatus)
         {
-            var inspection = CloneInspection(source);
+            var inspection = CloneInspection(source, confirmedStatus);
 
             foreach (var sourceBlock in source.Blocks)
             {
@@ -201,7 +281,7 @@ namespace AI_AOI.Database
 
                     foreach (var sourceAlarm in sourceComponent.Alarms)
                     {
-                        component.Alarms.Add(CloneAlarm(sourceAlarm));
+                        component.Alarms.Add(CloneAlarm(sourceAlarm, confirmedDefectTypes));
                     }
 
                     block.Components.Add(component);
@@ -249,12 +329,21 @@ namespace AI_AOI.Database
             };
         }
 
-        private static Repair.Alarm CloneAlarm(RepairAI.Alarm source)
+        private static Repair.Alarm CloneAlarm(
+            RepairAI.Alarm source,
+            Dictionary<Guid, string> confirmedDefectTypes)
         {
+            string defectType = source.DefectType;
+            if (confirmedDefectTypes != null &&
+                confirmedDefectTypes.TryGetValue(source.ComponentID, out var confirmedDefectType))
+            {
+                defectType = confirmedDefectType;
+            }
+
             return new Repair.Alarm
             {
                 ID = source.ID,
-                DefectType = source.DefectType,
+                DefectType = defectType,
                 AlarmType = source.AlarmType,
                 TopImage = null,
                 SideImage = null,
