@@ -36,22 +36,36 @@
               SelectionMode="Single"
               SelectionUnit="FullRow"
               HeadersVisibility="Column">
+                <DataGrid.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="All OK" Click="AllOkMenuItem_Click">
+                            <MenuItem.Icon>
+                                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE73E;"/>
+                            </MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="All NG" Click="AllNgMenuItem_Click">
+                            <MenuItem.Icon>
+                                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE711;"/>
+                            </MenuItem.Icon>
+                        </MenuItem>
+                    </ContextMenu>
+                </DataGrid.ContextMenu>
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="ID" Binding="{Binding No}"/>
+                    <DataGridTextColumn Header="No" Binding="{Binding No}"/>
                     <DataGridTextColumn Header="Inspected Date" Binding="{Binding InspectedDate, StringFormat=yyyy/MM/dd HH:mm:ss}"/>
                     <DataGridTextColumn Header="Barcode" Binding="{Binding Barcode}"/>
                     <DataGridTextColumn Header="Component Count" Binding="{Binding ComponentCountDisplay}"/>
-                    <DataGridTextColumn Header="Global Matching" Binding="{Binding GlobalMatchingCount}"/>
-                    <DataGridTextColumn Header="Alarm Mark Count" Binding="{Binding MarkCount}"/>
-                    <DataGridTextColumn Header="Bad Block Count" Binding="{Binding BadBlockCount}"/>
+                    <!--<DataGridTextColumn Header="Global Matching" Binding="{Binding GlobalMatchingCount}"/>-->
+                    <DataGridTextColumn Header="Mark Count" Binding="{Binding MarkCount}"/>
+                    <!--<DataGridTextColumn Header="Bad Block Count" Binding="{Binding BadBlockCount}"/>-->
                     <DataGridTextColumn Header="Board Name" Binding="{Binding BoardName}"/>
-                    <DataGridTextColumn Header="Product Lots" Binding="{Binding ProductLot}"/>
+                    <!--<DataGridTextColumn Header="Product Lots" Binding="{Binding ProductLot}"/>-->
                     <DataGridTextColumn Header="Line" Binding="{Binding Line}"/>
                     <DataGridTextColumn Header="Station" Binding="{Binding Station}"/>
                     <DataGridTextColumn Header="Operator" Binding="{Binding Operator}"/>
                     <DataGridTextColumn Header="Rail" Binding="{Binding Rail}"/>
                     <DataGridTextColumn Header="Side" Binding="{Binding Side}"/>
-                    <DataGridTextColumn Header="NG Buffer" Binding="{Binding NgBuffer}"/>
+                    <DataGridTextColumn Header="Status" Binding="{Binding Status}"/>
                 </DataGrid.Columns>
             </DataGrid>
         </Grid>

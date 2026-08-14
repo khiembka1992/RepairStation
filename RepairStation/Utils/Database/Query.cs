@@ -70,15 +70,15 @@ namespace AI_AOI.Database
                                 .Distinct()
                                 .Count(),
                             TotalComponentCount = i.Blocks.Sum(b => b.TotalComponentCount),
-                            GlobalMatchingCount = 0,
+                            //GlobalMatchingCount = 0,
                             MarkCount = i.Blocks.SelectMany(b => b.Marks).Count(),
-                            BadBlockCount = i.Blocks
-                                .SelectMany(b => b.BadMarks)
-                                .Select(bm => bm.BlockID)
-                                .Distinct()
-                                .Count(),
+                            //BadBlockCount = i.Blocks
+                            //    .SelectMany(b => b.BadMarks)
+                            //    .Select(bm => bm.BlockID)
+                            //    .Distinct()
+                            //    .Count(),
                             BoardName = i.BoardName ?? string.Empty,
-                            ProductLot = i.ProductLot ?? string.Empty,
+                            //ProductLot = i.ProductLot ?? string.Empty,
                             Line = i.Line ?? string.Empty,
                             Station = i.Station ?? string.Empty,
                             Operator = i.Operator ?? string.Empty,
@@ -265,17 +265,17 @@ namespace AI_AOI.Database
         public int AlarmComponentCount { get; set; }
         public int TotalComponentCount { get; set; }
         public string ComponentCountDisplay => $"{AlarmComponentCount} / {TotalComponentCount}";
-        public int GlobalMatchingCount { get; set; }
+        //public int GlobalMatchingCount { get; set; }
         public int MarkCount { get; set; }
-        public int BadBlockCount { get; set; }
+        //public int BadBlockCount { get; set; }
         public string BoardName { get; set; }
-        public string ProductLot { get; set; }
+        //public string ProductLot { get; set; }
         public string Line { get; set; }
         public string Station { get; set; }
         public string Operator { get; set; }
         public int Rail { get; set; }
         public string Side { get; set; }
         public int Status { get; set; }
-        public string NgBuffer => Status == 0 ? "■" : string.Empty;
+        //public string NgBuffer => Status == 0 ? "■" : string.Empty;
     }
 }

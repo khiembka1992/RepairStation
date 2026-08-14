@@ -101,7 +101,6 @@
       <Column Name="RailID" Type="System.Int32" DbType="INT NOT NULL" CanBeNull="false" UpdateCheck="Never" DefaultValue="1" Precision="10" ed:ValidateRequired="true" ed:Guid="c78503db-53b6-467e-9b42-43eeabcca3fd" />
       <Column Name="Side" Type="System.String" DbType="NVARCHAR(1) NOT NULL" CanBeNull="false" UpdateCheck="Never" DefaultValue="&quot;N'A'&quot;" MaxLength="1" Unicode="true" ed:ValidateMaxLength="1" ed:ValidateRequired="true" ed:Guid="ee35ea87-64d2-4b8f-921c-286f399ed547" />
       <Column Name="CycleTime" Type="System.Double" DbType="FLOAT NOT NULL" CanBeNull="false" UpdateCheck="Never" DefaultValue="0" Precision="53" ed:ValidateRequired="true" ed:Guid="61f68b06-587a-4b20-aeea-1336b50f7cd5" />
-      <Column Name="IsSend" Type="System.Int32" DbType="INT" CanBeNull="true" UpdateCheck="Never" Precision="10" ed:ValidateRequired="false" ed:Guid="5f1044a5-1e56-4841-8e60-3a95aff4bae1" />
       <Association Name="Inspection_Block" ed:AssociationGuid="f2e9489d-a4ea-4413-b5da-d158a5625784" Member="Blocks" ed:Guid="a569e004-d08c-48aa-95b9-e1f53a4fe2ba" ThisKey="ID" OtherKey="InspectionID" Type="Block" />
     </Type>
   </Table>

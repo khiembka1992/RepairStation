@@ -1,12 +1,27 @@
+using System;
+using System.Windows;
 using System.Windows.Controls;
 
 namespace AI_AOI.Views
 {
     public partial class StatisticsView : UserControl
     {
+        public event EventHandler BulkAllOkRequested;
+        public event EventHandler BulkAllNgRequested;
+
         public StatisticsView()
         {
             InitializeComponent();
+        }
+
+        private void AllOkMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            BulkAllOkRequested?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void AllNgMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            BulkAllNgRequested?.Invoke(this, EventArgs.Empty);
         }
 
         public TextBox SearchBarcodeTextBox => tbSearchBarcode;

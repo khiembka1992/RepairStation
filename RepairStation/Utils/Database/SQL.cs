@@ -46,18 +46,60 @@ namespace AI_AOI.Database
 
         public static bool CommitAndMoveInspection(Guid inspectionId, Dictionary<Guid, string> componentDefectTypes, out string error)
         {
-            return MoveInspectionInternal(inspectionId, componentDefectTypes, true, out error);
+            return MoveInspectionInternal(inspectionId, componentDefectTypes, true, null, out error);
+        }
+
+        public static bool CommitAllAndMoveInspection(Guid inspectionId, string defectType, out string error)
+        {
+            string normalizedDefectType = (defectType ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(normalizedDefectType))
+            {
+                error = "Defect type is required.";
+                return false;
+            }
+
+            try
+            {
+                string connStr = SoftwareSettingsManager.Current.HOLLY_AOI_REPAIR_AIConnectionString;
+                Dictionary<Guid, string> componentDefectTypes;
+                using (var db = new RepairAI.HOLLYAOIREPAIRAIDataContext(connStr))
+                {
+                    componentDefectTypes = db.Components
+                        .Where(c => c.Block.InspectionID == inspectionId)
+                        .Select(c => c.ID)
+                        .ToList()
+                        .ToDictionary(id => id, id => normalizedDefectType);
+                }
+
+                int confirmedStatus = IsOkDefectType(normalizedDefectType) ? 1 : 0;
+                return MoveInspectionInternal(
+                    inspectionId,
+                    componentDefectTypes,
+                    true,
+                    confirmedStatus,
+                    out error);
+            }
+            catch (Exception ex)
+            {
+                error = GetExceptionMessage(ex);
+                Logger.Error(
+                    "Prepare bulk confirmation for inspection {0} failed: {1}",
+                    inspectionId,
+                    ex);
+                return false;
+            }
         }
 
         public static bool MoveInspectionToRepair(Guid inspectionId, out string error)
         {
-            return MoveInspectionInternal(inspectionId, null, false, out error);
+            return MoveInspectionInternal(inspectionId, null, false, null, out error);
         }
 
         private static bool MoveInspectionInternal(
             Guid inspectionId,
             Dictionary<Guid, string> componentDefectTypes,
             bool updateDefectTypes,
+            int? confirmedStatusOverride,
             out string error)
         {
             error = null;
@@ -67,6 +109,12 @@ namespace AI_AOI.Database
                 var confirmedDefectTypes = updateDefectTypes
                     ? NormalizeDefectMap(componentDefectTypes)
                     : new Dictionary<Guid, string>();
+
+                if (updateDefectTypes)
+                {
+                    moveStage = "update alarm confirmation in Repair-AI";
+                    UpdateAlarmDefectTypes(inspectionId, confirmedDefectTypes);
+                }
 
                 string repairAiConn = SoftwareSettingsManager.Current.HOLLY_AOI_REPAIR_AIConnectionString;
                 string repairConn = SoftwareSettingsManager.Current.HOLLY_AOI_REPAIRConnectionString;
@@ -82,34 +130,10 @@ namespace AI_AOI.Database
                         return false;
                     }
 
-                    moveStage = "check inspection in Repair";
-                    if (target.Inspections.Any(i => i.ID == inspectionId))
-                    {
-                        moveStage = "delete duplicate inspection from Repair-AI";
-                        DeleteInspection(source, inspection);
-
-                        moveStage = "verify duplicate removal from Repair-AI";
-                        if (source.Inspections.Any(i => i.ID == inspectionId))
-                        {
-                            throw new InvalidOperationException(
-                                "Duplicate inspection still exists in Repair-AI after deleting.");
-                        }
-
-                        Logger.Info(
-                            "Removed inspection {0} from Repair-AI because it already exists in Repair.",
-                            inspectionId);
-                        return true;
-                    }
-
-                    if (updateDefectTypes)
-                    {
-                        moveStage = "update alarm confirmation in Repair-AI";
-                        UpdateAlarmDefectTypes(inspectionId, confirmedDefectTypes);
-                    }
-
-                    int? confirmedStatus = updateDefectTypes && confirmedDefectTypes.Count > 0
-                        ? (confirmedDefectTypes.Values.All(IsOkDefectType) ? 1 : 0)
-                        : (int?)null;
+                    int? confirmedStatus = confirmedStatusOverride ??
+                        (updateDefectTypes && confirmedDefectTypes.Count > 0
+                            ? (confirmedDefectTypes.Values.All(IsOkDefectType) ? 1 : 0)
+                            : (int?)null);
 
                     moveStage = "copy inspection to Repair";
                     CopyInspection(target, inspection, confirmedDefectTypes, confirmedStatus);
@@ -209,13 +233,42 @@ namespace AI_AOI.Database
             Dictionary<Guid, string> confirmedDefectTypes,
             int? confirmedStatus)
         {
-            if (target.Inspections.Any(i => i.ID == inspection.ID))
+            var existingInspection = target.Inspections.FirstOrDefault(i => i.ID == inspection.ID);
+            if (existingInspection != null)
             {
+                ApplyConfirmedValues(existingInspection, confirmedDefectTypes, confirmedStatus);
+                target.SubmitChanges();
                 return;
             }
 
             target.Inspections.InsertOnSubmit(CloneInspectionTree(inspection, confirmedDefectTypes, confirmedStatus));
             target.SubmitChanges();
+        }
+
+        private static void ApplyConfirmedValues(
+            Repair.Inspection inspection,
+            Dictionary<Guid, string> confirmedDefectTypes,
+            int? confirmedStatus)
+        {
+            if (confirmedStatus.HasValue)
+            {
+                inspection.Status = confirmedStatus.Value;
+            }
+
+            if (confirmedDefectTypes == null || confirmedDefectTypes.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var alarm in inspection.Blocks
+                .SelectMany(b => b.Components)
+                .SelectMany(c => c.Alarms))
+            {
+                if (confirmedDefectTypes.TryGetValue(alarm.ComponentID, out var defectType))
+                {
+                    alarm.DefectType = defectType;
+                }
+            }
         }
 
         private static void DeleteInspection(RepairAI.HOLLYAOIREPAIRAIDataContext source, RepairAI.Inspection inspection)
@@ -244,8 +297,7 @@ namespace AI_AOI.Database
                 Status = statusOverride ?? source.Status,
                 RailID = source.RailID,
                 Side = source.Side,
-                CycleTime = source.CycleTime,
-                IsSend = null
+                CycleTime = source.CycleTime
             };
         }
 

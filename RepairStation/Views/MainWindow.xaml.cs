@@ -48,10 +48,15 @@ namespace AI_AOI.Views {
         bool IsAlarmTypesConfigMissingNotified = false;
         int AlarmTypePageIndex = 0;
         const int AlarmTypeButtonsPerPage = 9;
+        const int StatisticsLoadLimit = 100;
+        const int StatisticsReloadThreshold = 50;
         static readonly string[] NumpadShortcutOrder = { "7", "8", "9", "4", "5", "6", "1", "2", "3" };
         bool IsTopComponentImageMode = false;
         HashSet<string> CurrentComponentAlarmTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         bool IsConfirmingIssue = false;
+        bool IsStatisticsRightClickInProgress = false;
+        bool IsBulkStatisticsCommitInProgress = false;
+        volatile bool IsStatisticsRefreshInProgress = false;
         bool IsStatisticsSelectionHandlingEnabled = true;
         bool WasStatisticsEmpty = true;
         readonly OperationView OperationScreen = new OperationView();
@@ -66,7 +71,11 @@ namespace AI_AOI.Views {
         {
             InitializeComponent();
             MainScreenHost.Content = StatisticsScreen;
-            dgStatistics.SelectionChanged += dgStatistics_SelectionChanged;
+            dgStatistics.PreviewMouseLeftButtonUp += dgStatistics_PreviewMouseLeftButtonUp;
+            dgStatistics.PreviewMouseRightButtonDown += dgStatistics_PreviewMouseRightButtonDown;
+            dgStatistics.PreviewMouseRightButtonUp += dgStatistics_PreviewMouseRightButtonUp;
+            StatisticsScreen.BulkAllOkRequested += StatisticsScreen_BulkAllOkRequested;
+            StatisticsScreen.BulkAllNgRequested += StatisticsScreen_BulkAllNgRequested;
             btnSearch.Click += btnSearch_Click;
             btnApplyFilter.Click += btnApplyFilter_Click;
             tbResultStatus.Click += ResultStatusButton_Click;
@@ -349,11 +358,29 @@ namespace AI_AOI.Views {
             }
         }
 
-        private void dgStatistics_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void dgStatistics_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
             if (!IsStatisticsSelectionHandlingEnabled) return;
-            if (!(dgStatistics.SelectedItem is InspectionStatisticRow row)) return;
-            ProcessSelectedStatisticsInspection(row);
+            if (IsStatisticsRightClickInProgress) return;
+
+            var source = e.OriginalSource as DependencyObject;
+            var dataGridRow = ItemsControl.ContainerFromElement(dgStatistics, source) as DataGridRow;
+            if (!(dataGridRow?.Item is InspectionStatisticRow inspection)) return;
+
+            ProcessSelectedStatisticsInspection(inspection);
+        }
+
+        private void dgStatistics_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            IsStatisticsRightClickInProgress = true;
+        }
+
+        private void dgStatistics_PreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                IsStatisticsRightClickInProgress = false;
+            }));
         }
 
         private void LoadStatisticsData()
@@ -365,7 +392,7 @@ namespace AI_AOI.Views {
                     null,
                     null,
                     tbSearchBarcode.Text?.Trim(),
-                    0);
+                    StatisticsLoadLimit);
 
                 ApplyStatisticsClientFilter();
             }
@@ -390,9 +417,6 @@ namespace AI_AOI.Views {
             if (!string.IsNullOrWhiteSpace(board))
                 filtered = filtered.Where(x => (x.BoardName ?? string.Empty).IndexOf(board, StringComparison.OrdinalIgnoreCase) >= 0);
 
-            if (!string.IsNullOrWhiteSpace(lot))
-                filtered = filtered.Where(x => (x.ProductLot ?? string.Empty).IndexOf(lot, StringComparison.OrdinalIgnoreCase) >= 0);
-
             if (!string.IsNullOrWhiteSpace(station))
                 filtered = filtered.Where(x => (x.Station ?? string.Empty).IndexOf(station, StringComparison.OrdinalIgnoreCase) >= 0);
 
@@ -405,6 +429,19 @@ namespace AI_AOI.Views {
             dgStatistics.ItemsSource = list;
             UpdateStatisticsSummary();
             WasStatisticsEmpty = list.Count == 0;
+        }
+
+        private void RemoveProcessedInspectionAndRefillWhenLow(Guid inspectionId)
+        {
+            StatisticsRows = (StatisticsRows ?? new List<InspectionStatisticRow>())
+                .Where(row => row.InspectionID != inspectionId)
+                .ToList();
+            ApplyStatisticsClientFilter();
+
+            if (StatisticsRows.Count < StatisticsReloadThreshold)
+            {
+                LoadStatisticsData();
+            }
         }
 
         private void UpdateStatisticsSummary()
@@ -731,6 +768,110 @@ namespace AI_AOI.Views {
         private void PanelImageView_BulkAllNgRequested(object sender, EventArgs e)
         {
             ApplyBulkConfirmForCurrentInspection(true, "Missing");
+        }
+
+        private async void StatisticsScreen_BulkAllOkRequested(object sender, EventArgs e)
+        {
+            await CommitLoadedStatisticsInspectionsAsync("OK");
+        }
+
+        private async void StatisticsScreen_BulkAllNgRequested(object sender, EventArgs e)
+        {
+            await CommitLoadedStatisticsInspectionsAsync("NG");
+        }
+
+        private async Task CommitLoadedStatisticsInspectionsAsync(string defectType)
+        {
+            if (IsBulkStatisticsCommitInProgress) return;
+
+            var rows = (dgStatistics.ItemsSource as IEnumerable<InspectionStatisticRow>)
+                ?.ToList() ?? new List<InspectionStatisticRow>();
+            if (rows.Count == 0)
+            {
+                UILib.ShowWarning("There are no loaded inspections to confirm.");
+                return;
+            }
+
+            string normalizedDefectType = string.Equals(
+                defectType,
+                "OK",
+                StringComparison.OrdinalIgnoreCase)
+                ? "OK"
+                : "NG";
+
+            var answer = MessageBox.Show(
+                $"Confirm all {rows.Count} currently displayed inspections as {normalizedDefectType} and move them to Repair?",
+                $"All {normalizedDefectType}",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            if (answer != MessageBoxResult.Yes) return;
+
+            IsBulkStatisticsCommitInProgress = true;
+            IsStatisticsSelectionHandlingEnabled = false;
+            StopStatisticsPolling();
+            dgStatistics.IsEnabled = false;
+
+            var failures = new List<string>();
+            try
+            {
+                for (int i = 0; i < rows.Count; i++)
+                {
+                    var row = rows[i];
+                    tbStatus.Text =
+                        $"Confirming {normalizedDefectType}: {i + 1}/{rows.Count}";
+
+                    var result = await Task.Run(() =>
+                    {
+                        string moveError;
+                        bool succeeded = SQL.CommitAllAndMoveInspection(
+                            row.InspectionID,
+                            normalizedDefectType,
+                            out moveError);
+                        return Tuple.Create(succeeded, moveError);
+                    });
+
+                    if (!result.Item1)
+                    {
+                        failures.Add($"{row.InspectionID}: {result.Item2}");
+                    }
+                }
+
+                LoadStatisticsData();
+
+                int succeededCount = rows.Count - failures.Count;
+                tbStatus.Text =
+                    $"Bulk {normalizedDefectType}: {succeededCount}/{rows.Count} completed";
+
+                if (failures.Count == 0)
+                {
+                    UILib.ShowInformation(
+                        $"Confirmed and moved {succeededCount} inspections as {normalizedDefectType}.");
+                }
+                else
+                {
+                    string failureDetails = string.Join(
+                        "\n",
+                        failures.Take(5));
+                    if (failures.Count > 5)
+                    {
+                        failureDetails += $"\n... and {failures.Count - 5} more.";
+                    }
+
+                    UILib.ShowWarning(
+                        $"Moved {succeededCount}/{rows.Count} inspections.\n\n{failureDetails}");
+                }
+            }
+            finally
+            {
+                dgStatistics.IsEnabled = true;
+                IsStatisticsSelectionHandlingEnabled = true;
+                IsBulkStatisticsCommitInProgress = false;
+
+                if (MainScreenHost.Content == StatisticsScreen)
+                {
+                    StartStatisticsPolling();
+                }
+            }
         }
 
         private void ApplyBulkConfirmForCurrentInspection(bool hasIssue, string defectType)
@@ -1445,6 +1586,11 @@ namespace AI_AOI.Views {
 
         private void Window_Closed(object sender, EventArgs e) {
             StopStatisticsPolling();
+            dgStatistics.PreviewMouseLeftButtonUp -= dgStatistics_PreviewMouseLeftButtonUp;
+            dgStatistics.PreviewMouseRightButtonDown -= dgStatistics_PreviewMouseRightButtonDown;
+            dgStatistics.PreviewMouseRightButtonUp -= dgStatistics_PreviewMouseRightButtonUp;
+            StatisticsScreen.BulkAllOkRequested -= StatisticsScreen_BulkAllOkRequested;
+            StatisticsScreen.BulkAllNgRequested -= StatisticsScreen_BulkAllNgRequested;
             if (PanelImageView != null)
             {
                 PanelImageView.BulkAllOkRequested -= PanelImageView_BulkAllOkRequested;
@@ -1714,7 +1860,7 @@ namespace AI_AOI.Views {
 
             UpdateRepeatedComponentRuntimeCountsForCurrentInspection();
             AccumulateSessionStatisticsForCurrentInspection();
-            LoadStatisticsData();
+            RemoveProcessedInspectionAndRefillWhenLow(CurrentDisplayInfor.InspectionID);
             if (TryOpenFirstPendingInspection()) return;
             MainScreenHost.Content = StatisticsScreen;
             ResetConfirmIssueUI();
@@ -1785,6 +1931,9 @@ namespace AI_AOI.Views {
 
         private void StatisticsPollTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
+            if (IsStatisticsRefreshInProgress) return;
+            IsStatisticsRefreshInProgress = true;
+
             if (StatisticsPollTimer != null)
             {
                 StatisticsPollTimer.Enabled = false;
@@ -1792,45 +1941,93 @@ namespace AI_AOI.Views {
 
             if (Dispatcher == null || Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
             {
+                IsStatisticsRefreshInProgress = false;
                 return;
+            }
+
+            bool shouldRefresh = false;
+            string barcodeKeyword = string.Empty;
+            Dispatcher.Invoke(new Action(() =>
+            {
+                shouldRefresh =
+                    IsLoaded &&
+                    MainScreenHost.Content == StatisticsScreen &&
+                    !IsConfirmingIssue &&
+                    !IsBulkStatisticsCommitInProgress &&
+                    (StatisticsRows?.Count ?? 0) < StatisticsReloadThreshold;
+                barcodeKeyword = tbSearchBarcode.Text?.Trim() ?? string.Empty;
+            }));
+
+            if (!shouldRefresh)
+            {
+                Dispatcher.BeginInvoke(new Action(CompleteStatisticsPoll));
+                return;
+            }
+
+            List<InspectionStatisticRow> refreshedRows = null;
+            Exception refreshError = null;
+            try
+            {
+                refreshedRows = Query.GetInspectionStatistics(
+                    string.Empty,
+                    null,
+                    null,
+                    barcodeKeyword,
+                    StatisticsLoadLimit);
+            }
+            catch (Exception ex)
+            {
+                refreshError = ex;
             }
 
             Dispatcher.BeginInvoke(new Action(() =>
             {
                 try
                 {
-                    if (!IsLoaded) return;
-                    PollStatisticsAndAutoOpen();
+                    if (!IsLoaded || MainScreenHost.Content != StatisticsScreen) return;
+                    if (IsBulkStatisticsCommitInProgress || IsStatisticsRightClickInProgress) return;
+                    if (dgStatistics.ContextMenu?.IsOpen == true) return;
+
+                    if (refreshError != null)
+                    {
+                        tbStatus.Text = $"Error: {refreshError.Message}";
+                        return;
+                    }
+
+                    bool wasEmptyBeforePoll = WasStatisticsEmpty;
+                    IsStatisticsSelectionHandlingEnabled = false;
+                    try
+                    {
+                        StatisticsRows = refreshedRows ?? new List<InspectionStatisticRow>();
+                        ApplyStatisticsClientFilter();
+                    }
+                    finally
+                    {
+                        IsStatisticsSelectionHandlingEnabled = true;
+                    }
+
+                    if (wasEmptyBeforePoll)
+                    {
+                        TryOpenFirstPendingInspection();
+                    }
                 }
                 finally
                 {
-                    // Resume polling only when staying on Statistics screen.
-                    if (StatisticsPollTimer != null && MainScreenHost.Content == StatisticsScreen)
-                    {
-                        StatisticsPollTimer.Enabled = true;
-                    }
+                    CompleteStatisticsPoll();
                 }
             }));
         }
 
-        private void PollStatisticsAndAutoOpen()
+        private void CompleteStatisticsPoll()
         {
-            if (MainScreenHost.Content != StatisticsScreen) return;
-            if (IsConfirmingIssue) return;
-
-            bool wasEmptyBeforePoll = WasStatisticsEmpty;
-            IsStatisticsSelectionHandlingEnabled = false;
-            try
+            IsStatisticsRefreshInProgress = false;
+            if (StatisticsPollTimer != null &&
+                IsLoaded &&
+                MainScreenHost.Content == StatisticsScreen &&
+                !IsBulkStatisticsCommitInProgress)
             {
-                LoadStatisticsData();
+                StatisticsPollTimer.Enabled = true;
             }
-            finally
-            {
-                IsStatisticsSelectionHandlingEnabled = true;
-            }
-
-            if (!wasEmptyBeforePoll) return;
-            TryOpenFirstPendingInspection();
         }
 
         private bool TryOpenFirstPendingInspection()
@@ -1881,7 +2078,7 @@ namespace AI_AOI.Views {
                         return false;
                     }
 
-                    LoadStatisticsData();
+                    RemoveProcessedInspectionAndRefillWhenLow(row.InspectionID);
                     continue;
                 }
 
@@ -1911,7 +2108,7 @@ namespace AI_AOI.Views {
                     return;
                 }
 
-                LoadStatisticsData();
+                RemoveProcessedInspectionAndRefillWhenLow(row.InspectionID);
                 TryOpenFirstPendingInspection();
                 return;
             }
