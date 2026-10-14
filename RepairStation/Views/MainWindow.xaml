@@ -51,6 +51,18 @@
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
+            <MenuItem x:Name="menuDatabase" Header="Database" Style="{StaticResource MainMenuItemStyle}">
+                <MenuItem Header="Confirm All OK" Click="menuConfirmAllOk_Click" Style="{StaticResource MainMenuItemStyle}">
+                    <MenuItem.Icon>
+                        <TextBlock Style="{StaticResource MenuGlyphStyle}" Text="&#xE73E;"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Confirm All NG" Click="menuConfirmAllNg_Click" Style="{StaticResource MainMenuItemStyle}">
+                    <MenuItem.Icon>
+                        <TextBlock Style="{StaticResource MenuGlyphStyle}" Text="&#xE711;"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
             <MenuItem Header="Help" Style="{StaticResource MainMenuItemStyle}">
                 <MenuItem x:Name="menuHelp" Header="Help" Click="menuHelp_Click" Style="{StaticResource MainMenuItemStyle}">
                     <MenuItem.Icon>

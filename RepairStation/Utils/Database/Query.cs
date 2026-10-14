@@ -10,6 +10,60 @@ namespace AI_AOI.Database
     {
         private static readonly NLog.Logger Logger = NLog.LogManager.GetLogger("debug");
 
+        public static InspectionBatchSnapshot GetInspectionBatchSnapshot()
+        {
+            try
+            {
+                string connStr = SoftwareSettingsManager.Current.HOLLY_AOI_REPAIR_AIConnectionString;
+                using (var db = new HOLLYAOIREPAIRAIDataContext(connStr))
+                {
+                    if (!db.Inspections.Any())
+                    {
+                        return new InspectionBatchSnapshot();
+                    }
+
+                    DateTime cutoff = db.Inspections.Max(i => i.InspectionDateTime);
+                    return new InspectionBatchSnapshot
+                    {
+                        Cutoff = cutoff,
+                        Count = db.Inspections.Count(i => i.InspectionDateTime <= cutoff)
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "GetInspectionBatchSnapshot failed.");
+                throw;
+            }
+        }
+
+        public static List<Guid> GetInspectionIdBatch(
+            DateTime cutoff,
+            int skipCount,
+            int batchSize)
+        {
+            try
+            {
+                string connStr = SoftwareSettingsManager.Current.HOLLY_AOI_REPAIR_AIConnectionString;
+                using (var db = new HOLLYAOIREPAIRAIDataContext(connStr))
+                {
+                    return db.Inspections
+                        .Where(i => i.InspectionDateTime <= cutoff)
+                        .OrderBy(i => i.InspectionDateTime)
+                        .ThenBy(i => i.ID)
+                        .Skip(Math.Max(0, skipCount))
+                        .Take(Math.Max(1, batchSize))
+                        .Select(i => i.ID)
+                        .ToList();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "GetInspectionIdBatch failed.");
+                throw;
+            }
+        }
+
         public static List<InspectionStatisticRow> GetInspectionStatistics(
             string lineName,
             DateTime? fromTime,
@@ -205,6 +259,12 @@ namespace AI_AOI.Database
                 .Where(d => d != null)
                 .ToList();
         }
+    }
+
+    public class InspectionBatchSnapshot
+    {
+        public DateTime Cutoff { get; set; }
+        public int Count { get; set; }
     }
 
     public class QueryResult

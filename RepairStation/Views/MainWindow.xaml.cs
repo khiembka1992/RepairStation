@@ -50,6 +50,7 @@ namespace AI_AOI.Views {
         const int AlarmTypeButtonsPerPage = 9;
         const int StatisticsLoadLimit = 100;
         const int StatisticsReloadThreshold = 50;
+        const int DatabaseInspectionBatchSize = 1000;
         static readonly string[] NumpadShortcutOrder = { "7", "8", "9", "4", "5", "6", "1", "2", "3" };
         bool IsTopComponentImageMode = false;
         HashSet<string> CurrentComponentAlarmTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -778,6 +779,166 @@ namespace AI_AOI.Views {
         private async void StatisticsScreen_BulkAllNgRequested(object sender, EventArgs e)
         {
             await CommitLoadedStatisticsInspectionsAsync("NG");
+        }
+
+        private async void menuConfirmAllOk_Click(object sender, RoutedEventArgs e)
+        {
+            await CommitAllDatabaseInspectionsAsync("OK");
+        }
+
+        private async void menuConfirmAllNg_Click(object sender, RoutedEventArgs e)
+        {
+            await CommitAllDatabaseInspectionsAsync("NG");
+        }
+
+        private async Task CommitAllDatabaseInspectionsAsync(string defectType)
+        {
+            if (IsBulkStatisticsCommitInProgress) return;
+
+            string normalizedDefectType = string.Equals(
+                defectType,
+                "OK",
+                StringComparison.OrdinalIgnoreCase)
+                ? "OK"
+                : "NG";
+
+            IsBulkStatisticsCommitInProgress = true;
+            StopStatisticsPolling();
+            menuDatabase.IsEnabled = false;
+            tbStatus.Text = "Reading all inspections from Repair-AI...";
+
+            try
+            {
+                InspectionBatchSnapshot snapshot;
+                try
+                {
+                    snapshot = await Task.Run(() => Query.GetInspectionBatchSnapshot());
+                }
+                catch (Exception ex)
+                {
+                    UILib.ShowError($"Load inspections from Repair-AI failed: {ex.Message}");
+                    return;
+                }
+
+                if (snapshot.Count == 0)
+                {
+                    tbStatus.Text = "Repair-AI has no inspections.";
+                    UILib.ShowInformation("Repair-AI has no inspections to move.");
+                    return;
+                }
+
+                var answer = MessageBox.Show(
+                    $"Confirm ALL {snapshot.Count} inspections currently in Repair-AI as {normalizedDefectType} and move them to Repair?\n\n" +
+                    $"Data will be processed in batches of {DatabaseInspectionBatchSize}.\n" +
+                    "Inspections created after this confirmation will not be included.",
+                    $"Confirm Entire Repair-AI as {normalizedDefectType}",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+                if (answer != MessageBoxResult.Yes)
+                {
+                    tbStatus.Text = "Database bulk confirmation cancelled.";
+                    return;
+                }
+
+                MainScreenHost.IsEnabled = false;
+                var failureDetails = new List<string>();
+                int failureCount = 0;
+                int completedCount = 0;
+                try
+                {
+                    await Task.Run(() =>
+                    {
+                        while (completedCount < snapshot.Count)
+                        {
+                            int batchSize = Math.Min(
+                                DatabaseInspectionBatchSize,
+                                snapshot.Count - completedCount);
+                            var inspectionIds = Query.GetInspectionIdBatch(
+                                snapshot.Cutoff,
+                                failureCount,
+                                batchSize);
+
+                            if (inspectionIds.Count == 0)
+                            {
+                                break;
+                            }
+
+                            foreach (Guid inspectionId in inspectionIds)
+                            {
+                                string moveError;
+                                if (!SQL.CommitAllAndMoveInspection(
+                                    inspectionId,
+                                    normalizedDefectType,
+                                    out moveError))
+                                {
+                                    failureCount++;
+                                    if (failureDetails.Count < 5)
+                                    {
+                                        failureDetails.Add($"{inspectionId}: {moveError}");
+                                    }
+                                }
+
+                                completedCount++;
+                                int progress = completedCount;
+                                if (progress == snapshot.Count || progress % 10 == 0)
+                                {
+                                    Dispatcher.BeginInvoke(new Action(() =>
+                                    {
+                                        tbStatus.Text =
+                                            $"Confirming all {normalizedDefectType}: {progress}/{snapshot.Count}";
+                                    }));
+                                }
+                            }
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    UILib.ShowError(
+                        $"Database bulk confirmation stopped after {completedCount}/{snapshot.Count}: {ex.Message}");
+                }
+
+                LoadStatisticsData();
+
+                int succeededCount = completedCount - failureCount;
+                int unavailableCount = snapshot.Count - completedCount;
+                tbStatus.Text =
+                    $"Database bulk {normalizedDefectType}: {succeededCount}/{snapshot.Count} moved";
+
+                if (failureCount == 0 && unavailableCount == 0)
+                {
+                    UILib.ShowInformation(
+                        $"Confirmed and moved all {succeededCount} inspections as {normalizedDefectType}.");
+                }
+                else
+                {
+                    string details = string.Join("\n", failureDetails);
+                    if (failureCount > failureDetails.Count)
+                    {
+                        details += $"\n... and {failureCount - failureDetails.Count} more failures.";
+                    }
+                    if (unavailableCount > 0)
+                    {
+                        details += $"\n{unavailableCount} snapshot inspections were no longer available.";
+                    }
+
+                    UILib.ShowWarning(
+                        $"Moved {succeededCount}/{snapshot.Count} inspections. " +
+                        "Failed inspections remain in Repair-AI.\n\n" +
+                        details.Trim());
+                }
+            }
+            finally
+            {
+                MainScreenHost.IsEnabled = true;
+                menuDatabase.IsEnabled = true;
+                IsBulkStatisticsCommitInProgress = false;
+
+                if (MainScreenHost.Content == StatisticsScreen)
+                {
+                    StartStatisticsPolling();
+                }
+            }
         }
 
         private async Task CommitLoadedStatisticsInspectionsAsync(string defectType)
