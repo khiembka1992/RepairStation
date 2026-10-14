@@ -183,6 +183,9 @@ namespace AI_AOI.Database
                         RailID = inspection.RailID,
                         HasMark = inspection.Blocks.Any(b => b.Marks.Any()),
                         BlockNumbers = inspection.Blocks.Select(b => b.Number).Distinct().OrderBy(n => n).ToList(),
+                        BlockTotalComponentCounts = inspection.Blocks
+                            .GroupBy(b => b.Number)
+                            .ToDictionary(g => g.Key, g => g.Sum(b => b.TotalComponentCount)),
                         DefectLocations = GetDefectLocations(db, inspectionId)
                     };
 
@@ -283,6 +286,7 @@ namespace AI_AOI.Database
         public string ProductLot { get; set; }
         public string Line { get; set; }
         public List<int> BlockNumbers { get; set; } = new List<int>();
+        public Dictionary<int, int> BlockTotalComponentCounts { get; set; } = new Dictionary<int, int>();
         public List<DefectLocation> DefectLocations { get; set; }
     }
 

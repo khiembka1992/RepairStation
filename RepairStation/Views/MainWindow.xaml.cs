@@ -535,6 +535,7 @@ namespace AI_AOI.Views {
                 TotalComponentCount = rowMeta?.TotalComponentCount ?? 0,
                 BlockCount = rowMeta?.BlockCount ?? 0,
                 BlockNumbers = queryResult.BlockNumbers?.Distinct().OrderBy(x => x).ToList() ?? new List<int>(),
+                BlockTotalComponentCounts = queryResult.BlockTotalComponentCounts ?? new Dictionary<int, int>(),
                 NgAoiComponentCount = rowMeta?.AlarmComponentCount ?? (queryResult.DefectLocations?.Count ?? 0)
             };
 
@@ -2401,6 +2402,7 @@ namespace AI_AOI.Views {
                 useConfirmedAlarmType: false);
 
             SaveShopfloorExportLogs();
+            SavePanelBlockExportLogs();
         }
 
         private void SaveOffsetTextLog(string rootPath, IEnumerable<Tuple<int, ComponentInfor>> components, bool useConfirmedAlarmType)
@@ -2411,6 +2413,7 @@ namespace AI_AOI.Views {
             if (rows.Count == 0) return;
 
             DateTime inspectTime = CurrentDisplayInfor.InspectTime;
+            string compactDate = inspectTime.ToString("yyyyMMdd");
             string timestamp = inspectTime.ToString("yyyyMMddHHmmss");
             string boardName = CurrentDisplayInfor.Model ?? string.Empty;
             string line = CurrentDisplayInfor.Line ?? string.Empty;
@@ -2455,6 +2458,7 @@ namespace AI_AOI.Views {
         {
             string rootPath = SoftwareSettingsManager.Current.ShopfloorExportRootPath;
             if (string.IsNullOrWhiteSpace(rootPath)) return;
+            if (CurrentDisplayInfor == null) return;
 
             var components = CurrentDisplayInfor.ComponentInfors
                 .Select((component, index) => Tuple.Create(index, component))
@@ -2513,6 +2517,63 @@ namespace AI_AOI.Views {
             }
         }
 
+        private void SavePanelBlockExportLogs()
+        {
+            string rootPath = SoftwareSettingsManager.Current.PanelExportRootPath;
+            if (string.IsNullOrWhiteSpace(rootPath)) return;
+            if (CurrentDisplayInfor == null) return;
+
+            var components = (CurrentDisplayInfor.ComponentInfors ?? new List<ComponentInfor>())
+                .Select((component, index) => Tuple.Create(index, component))
+                .Where(x => x.Item2 != null)
+                .ToList();
+
+            DateTime inspectTime = CurrentDisplayInfor.InspectTime;
+            string compactDate = inspectTime.ToString("yyyyMMdd");
+            string timestamp = inspectTime.ToString("yyyyMMddHHmmss");
+            string boardName = CurrentDisplayInfor.Model ?? string.Empty;
+            string line = CurrentDisplayInfor.Line ?? string.Empty;
+            string panelSn = CurrentDisplayInfor.SN ?? CurrentDisplayInfor.InspectionID.ToString();
+
+            var componentsByBlock = components
+                .GroupBy(x => x.Item2.BlockID)
+                .ToDictionary(g => g.Key, g => g.ToList());
+            var blockNumbers = GetShopfloorBlockNumbers(componentsByBlock.Keys);
+
+            foreach (var blockNumber in blockNumbers)
+            {
+                var blockRows = componentsByBlock.TryGetValue(blockNumber, out var rows)
+                    ? rows
+                    : new List<Tuple<int, ComponentInfor>>();
+                var failedRows = blockRows
+                    .Where(x => !IsConfirmedOk(x.Item1, GetConfirmedDefectType(x.Item1)))
+                    .ToList();
+                int confirmedOkCount = blockRows.Count(x => IsConfirmedOk(x.Item1, GetConfirmedDefectType(x.Item1)));
+                int blockTotalComponentCount = CurrentDisplayInfor.BlockTotalComponentCounts != null &&
+                    CurrentDisplayInfor.BlockTotalComponentCounts.TryGetValue(blockNumber, out var total)
+                    ? total
+                    : blockRows.Count;
+
+                var lines = new List<string>
+                {
+                    $"{boardName};{line};{panelSn};{timestamp};{blockTotalComponentCount};",
+                    $"RPASS;{confirmedOkCount};",
+                    string.Concat(failedRows.Select(x =>
+                    {
+                        var component = x.Item2;
+                        return $"{component.Name}_{component.BlockID},{component.Catalog ?? string.Empty},{GetConfirmedDefectType(x.Item1)};";
+                    }))
+                };
+
+                string folder = Path.Combine(
+                    rootPath,
+                    SanitizePathPart(boardName, "Board"),
+                    compactDate);
+                string fileName = $"{SanitizePathPart(line, "Line")}_{timestamp}_{SanitizePathPart(blockNumber.ToString(), "0")}.txt";
+                WriteAllLinesCreatingDirectory(Path.Combine(folder, fileName), lines, new UTF8Encoding(false));
+            }
+        }
+
         private List<int> GetShopfloorBlockNumbers(IEnumerable<int> componentBlockNumbers)
         {
             var blocks = (CurrentDisplayInfor?.BlockNumbers ?? new List<int>())
@@ -2537,7 +2598,10 @@ namespace AI_AOI.Views {
                 .Where(x => x.Item2 != null && IsConfirmedOk(x.Item1, GetConfirmedDefectType(x.Item1)) == isOk);
         }
 
-        private static void WriteAllLinesCreatingDirectory(string filePath, IEnumerable<string> lines)
+        private static void WriteAllLinesCreatingDirectory(
+            string filePath,
+            IEnumerable<string> lines,
+            Encoding encoding = null)
         {
             if (string.IsNullOrWhiteSpace(filePath)) return;
 
@@ -2547,7 +2611,7 @@ namespace AI_AOI.Views {
                 Directory.CreateDirectory(folder);
             }
 
-            File.WriteAllLines(filePath, lines ?? Enumerable.Empty<string>(), Encoding.UTF8);
+            File.WriteAllLines(filePath, lines ?? Enumerable.Empty<string>(), encoding ?? Encoding.UTF8);
         }
 
         private static string FormatLogNumber(double value)
@@ -2677,6 +2741,7 @@ namespace AI_AOI.Views {
         public string Line { get; set; }
         public int BlockCount { get; set; }
         public List<int> BlockNumbers { get; set; } = new List<int>();
+        public Dictionary<int, int> BlockTotalComponentCounts { get; set; } = new Dictionary<int, int>();
         public int TotalComponentCount { get; set; }
         public int NgAoiComponentCount { get; set; }
         public Mat PanelImage { get; set; }

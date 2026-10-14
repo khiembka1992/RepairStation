@@ -17,6 +17,7 @@ namespace AI_AOI.Config
         public string OffsetNgRootPath { get; set; }
         public string OffsetOkRootPath { get; set; }
         public string ShopfloorExportRootPath { get; set; }
+        public string PanelExportRootPath { get; set; }
         public int RepeatedComponentLockCount { get; set; }
         public string RepeatedComponentUnlockPassword { get; set; }
         public string AlarmTypesRedText { get; set; }
@@ -114,6 +115,7 @@ namespace AI_AOI.Config
                 OffsetNgRootPath = @"E:\HLAOI_OFFSET_NG",
                 OffsetOkRootPath = @"E:\HLAOI_OFFSET_OK",
                 ShopfloorExportRootPath = @"E:\HLAOI_SHOPFLOOR_EXPORTS_FOXCONN_VN",
+                PanelExportRootPath = @"E:\HLAOI_SHOPFLOOR_EXPORTS",
                 RepeatedComponentLockCount = 8,
                 RepeatedComponentUnlockPassword = "1",
                 AlarmTypesRedText = "Missing,Wrong Part,Polarity,Tombstone,Bridge",
@@ -144,6 +146,8 @@ namespace AI_AOI.Config
                 data.OffsetOkRootPath = @"E:\HLAOI_OFFSET_OK";
             if (string.IsNullOrWhiteSpace(data.ShopfloorExportRootPath))
                 data.ShopfloorExportRootPath = @"E:\HLAOI_SHOPFLOOR_EXPORTS_FOXCONN_VN";
+            if (string.IsNullOrWhiteSpace(data.PanelExportRootPath))
+                data.PanelExportRootPath = @"E:\HLAOI_SHOPFLOOR_EXPORTS";
             if (data.RepeatedComponentLockCount <= 0)
                 data.RepeatedComponentLockCount = 8;
             if (string.IsNullOrWhiteSpace(data.RepeatedComponentUnlockPassword))
