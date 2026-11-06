@@ -78,8 +78,12 @@
     <ApplicationIcon>eye.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Devart.Data.Linq, Version=5.2.235.0, Culture=neutral, PublicKeyToken=09af7300eec23701, processorArchitecture=MSIL" />
-    <Reference Include="Devart.Data.SqlServer.Linq, Version=5.2.235.0, Culture=neutral, PublicKeyToken=09af7300eec23701, processorArchitecture=MSIL" />
+    <Reference Include="Devart.Data.Linq">
+      <HintPath>libs\Devart.Data.Linq.dll</HintPath>
+    </Reference>
+    <Reference Include="Devart.Data.SqlServer.Linq">
+      <HintPath>libs\Devart.Data.SqlServer.Linq.dll</HintPath>
+    </Reference>
     <Reference Include="Emgu.CV.Bitmap, Version=4.4.0.4099, Culture=neutral, PublicKeyToken=7281126722ab4438, processorArchitecture=MSIL">
       <HintPath>..\packages\Emgu.CV.Bitmap.4.4.0.4099\lib\netstandard2.0\Emgu.CV.Bitmap.dll</HintPath>
     </Reference>
@@ -87,8 +91,8 @@
       <HintPath>..\packages\Emgu.CV.4.4.0.4099\lib\netstandard2.0\Emgu.CV.Platform.NetStandard.dll</HintPath>
     </Reference>
     <Reference Include="Interop.ActUtlType64Lib">
-      <HintPath>C:\Program Files (x86)\MELSOFT\ACT\Samples\Vcs.NET\Act_2019\Act_2019\obj\x64\Debug\Interop.ActUtlType64Lib.dll</HintPath>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
+      <HintPath>libs\Interop.ActUtlType64Lib.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
