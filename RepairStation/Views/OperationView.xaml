@@ -38,7 +38,11 @@
                 <ColumnDefinition Width="1*"/>
             </Grid.ColumnDefinitions>
 
-            <imb:ImageBox Grid.Column="0" x:Name="PanelImageView" BorderBrush="Gray" BorderThickness="1"/>
+            <imb:ImageBox Grid.Column="0" x:Name="PanelImageView"
+                          BorderBrush="Gray"
+                          BorderThickness="1"
+                          ShowBulkConfirmMenu="True"
+                          ShowDeleteMenu="True"/>
 
             <Grid Grid.Column="1">
                 <Grid.RowDefinitions>

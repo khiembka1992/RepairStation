@@ -95,6 +95,41 @@ namespace AI_AOI.Database
             return MoveInspectionInternal(inspectionId, null, false, null, out error);
         }
 
+        public static bool DeleteInspection(Guid inspectionId, out string error)
+        {
+            error = null;
+            try
+            {
+                string connStr = SoftwareSettingsManager.Current.HOLLY_AOI_REPAIR_AIConnectionString;
+                using (var db = new RepairAI.HOLLYAOIREPAIRAIDataContext(connStr))
+                {
+                    var inspection = db.Inspections.FirstOrDefault(i => i.ID == inspectionId);
+                    if (inspection == null)
+                    {
+                        error = "Inspection not found.";
+                        return false;
+                    }
+
+                    DeleteInspection(db, inspection);
+
+                    if (db.Inspections.Any(i => i.ID == inspectionId))
+                    {
+                        error = "Inspection still exists in Repair-AI after deleting.";
+                        return false;
+                    }
+                }
+
+                Logger.Info("Deleted inspection {0} from Repair-AI.", inspectionId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                error = GetExceptionMessage(ex);
+                Logger.Error(ex, "Delete inspection {0} failed.", inspectionId);
+                return false;
+            }
+        }
+
         private static bool MoveInspectionInternal(
             Guid inspectionId,
             Dictionary<Guid, string> componentDefectTypes,

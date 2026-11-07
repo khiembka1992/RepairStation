@@ -80,9 +80,9 @@ namespace AI_AOI.Views {
             btnSearch.Click += btnSearch_Click;
             btnApplyFilter.Click += btnApplyFilter_Click;
             tbResultStatus.Click += ResultStatusButton_Click;
-            PanelImageView.ShowBulkConfirmMenu = true;
             PanelImageView.BulkAllOkRequested += PanelImageView_BulkAllOkRequested;
             PanelImageView.BulkAllNgRequested += PanelImageView_BulkAllNgRequested;
+            PanelImageView.DeleteRequested += PanelImageView_DeleteRequested;
             PanelImageView.Clicked += PanelImageView_Clicked;
             ResultPreviewImage.Clicked += ResultPreviewImage_Clicked;
             tbStatus.Text = "Result: WAITTING";
@@ -770,6 +770,78 @@ namespace AI_AOI.Views {
         private void PanelImageView_BulkAllNgRequested(object sender, EventArgs e)
         {
             ApplyBulkConfirmForCurrentInspection(true, "Missing");
+        }
+
+        private void PanelImageView_DeleteRequested(object sender, EventArgs e)
+        {
+            DeleteCurrentInspection();
+        }
+
+        private void DeleteCurrentInspection()
+        {
+            try
+            {
+                if (CurrentDisplayInfor == null)
+                {
+                    UILib.ShowWarning("There is no inspection to delete.");
+                    return;
+                }
+
+                Guid inspectionId = CurrentDisplayInfor.InspectionID;
+                string barcode = string.IsNullOrWhiteSpace(CurrentDisplayInfor.SN)
+                    ? inspectionId.ToString()
+                    : CurrentDisplayInfor.SN;
+                var passwordWindow = new DeleteInspectionWindow(
+                    barcode,
+                    inspectionId,
+                    SoftwareSettingsManager.Current.RepeatedComponentUnlockPassword)
+                {
+                    Owner = this
+                };
+                if (passwordWindow.ShowDialog() != true)
+                {
+                    return;
+                }
+
+                if (!SQL.DeleteInspection(inspectionId, out var error))
+                {
+                    UILib.ShowError($"Delete inspection failed: {error}");
+                    return;
+                }
+
+                SessionCountedInspectionIds.Remove(inspectionId);
+                RemoveProcessedInspectionAndRefillWhenLow(inspectionId);
+                ClearCurrentInspection();
+
+                if (TryOpenFirstPendingInspection()) return;
+
+                MainScreenHost.Content = StatisticsScreen;
+                ResetConfirmIssueUI();
+                StartStatisticsPolling();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Delete current inspection failed.");
+                UILib.ShowError($"Delete inspection failed: {ex.Message}");
+            }
+        }
+
+        private void ClearCurrentInspection()
+        {
+            PanelImage?.Dispose();
+            PanelImage = null;
+            CurrentDisplayInfor?.PanelImage?.Dispose();
+            CurrentDisplayInfor = null;
+            PanelImageView.ImageSource = null;
+            PanelImageView.DrawedRectangles = new ObservableCollection<MyDrawedRectangle>();
+            PanelImageView.DrawedTexts = new ObservableCollection<MyDrawedText>();
+            ComponentReferenceImageView.Source = null;
+            ComponentReferenceImageView.RenderTransform = null;
+            ComponentImageView.Source = null;
+            AlarmComponentImageView.Source = null;
+            ResetConfirmIssueUI();
+            UpdateDisplayHeader(null);
+            UpdateAlarmedStatistics();
         }
 
         private async void StatisticsScreen_BulkAllOkRequested(object sender, EventArgs e)
@@ -1757,6 +1829,7 @@ namespace AI_AOI.Views {
             {
                 PanelImageView.BulkAllOkRequested -= PanelImageView_BulkAllOkRequested;
                 PanelImageView.BulkAllNgRequested -= PanelImageView_BulkAllNgRequested;
+                PanelImageView.DeleteRequested -= PanelImageView_DeleteRequested;
                 PanelImageView.Clicked -= PanelImageView_Clicked;
             }
             ResultPreviewImage.Clicked -= ResultPreviewImage_Clicked;

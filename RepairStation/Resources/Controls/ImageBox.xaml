@@ -45,6 +45,10 @@
                     <MenuItem x:Name="mnAllNg" Click="mnAllNg_Click" Header="All NG" Visibility="Collapsed">
                         <MenuItem.Icon><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE711;"/></MenuItem.Icon>
                     </MenuItem>
+                    <Separator x:Name="mnDeleteSeparator" Visibility="Collapsed"/>
+                    <MenuItem x:Name="mnDelete" Click="mnDelete_Click" Header="Delete" Visibility="Collapsed">
+                        <MenuItem.Icon><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;"/></MenuItem.Icon>
+                    </MenuItem>
                 </ContextMenu>
             </ScrollViewer.ContextMenu>
         <Grid x:Name="grid">

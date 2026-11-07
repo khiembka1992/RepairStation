@@ -44,6 +44,7 @@ namespace Andrew.Controls
         public event SelectRectangleHandler SelectRectangleChanged;
         public event EventHandler BulkAllOkRequested;
         public event EventHandler BulkAllNgRequested;
+        public event EventHandler DeleteRequested;
         private ObservableCollection<MyDrawedRectangle> _DrawedRectangles;
         private ObservableCollection<MyDrawedText> _DrawedTexts;
         private ObservableCollection<MyDrawedImage> _DrawedImages;
@@ -64,10 +65,22 @@ namespace Andrew.Controls
             typeof(ImageBox),
             new PropertyMetadata(false, OnShowBulkConfirmMenuChanged));
 
+        public static readonly DependencyProperty ShowDeleteMenuProperty = DependencyProperty.Register(
+            nameof(ShowDeleteMenu),
+            typeof(bool),
+            typeof(ImageBox),
+            new PropertyMetadata(false, OnShowDeleteMenuChanged));
+
         public bool ShowBulkConfirmMenu
         {
             get => (bool)GetValue(ShowBulkConfirmMenuProperty);
             set => SetValue(ShowBulkConfirmMenuProperty, value);
+        }
+
+        public bool ShowDeleteMenu
+        {
+            get => (bool)GetValue(ShowDeleteMenuProperty);
+            set => SetValue(ShowDeleteMenuProperty, value);
         }
 
         private static void OnShowBulkConfirmMenuChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -75,6 +88,14 @@ namespace Andrew.Controls
             if (d is ImageBox box)
             {
                 box.UpdateBulkMenuVisibility((bool)e.NewValue);
+            }
+        }
+
+        private static void OnShowDeleteMenuChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is ImageBox box)
+            {
+                box.UpdateDeleteMenuVisibility((bool)e.NewValue);
             }
         }
 
@@ -594,6 +615,7 @@ namespace Andrew.Controls
             rect.RenderTransform = _rotateTransform;
             subrect.RenderTransform = _rotateTransform;
             UpdateBulkMenuVisibility(ShowBulkConfirmMenu);
+            UpdateDeleteMenuVisibility(ShowDeleteMenu);
 
         }
 
@@ -604,6 +626,14 @@ namespace Andrew.Controls
             mnBulkSeparator.Visibility = visibility;
             mnAllOk.Visibility = visibility;
             mnAllNg.Visibility = visibility;
+        }
+
+        private void UpdateDeleteMenuVisibility(bool visible)
+        {
+            if (mnDeleteSeparator == null || mnDelete == null) return;
+            var visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+            mnDeleteSeparator.Visibility = visibility;
+            mnDelete.Visibility = visibility;
         }
 
 
@@ -1018,6 +1048,11 @@ namespace Andrew.Controls
         private void mnAllNg_Click(object sender, RoutedEventArgs e)
         {
             BulkAllNgRequested?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void mnDelete_Click(object sender, RoutedEventArgs e)
+        {
+            DeleteRequested?.Invoke(this, EventArgs.Empty);
         }
 
         private void UserControl_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
