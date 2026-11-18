@@ -167,6 +167,7 @@ namespace AI_AOI.Database
                     {
                         ID = inspection.ID,
                         SN = inspection.Blocks
+                            .Where(b => b.Number == 0)
                             .SelectMany(b => b.Barcodes)
                             .Where(bc => !string.IsNullOrEmpty(bc.CodeText))
                             .OrderBy(bc => bc.ID)
